@@ -34,9 +34,14 @@
 	</ItemGroup>
 
 	<PropertyGroup>
-		<AssemblyPath>$(MegabonkPath)/BepInEx/interop</AssemblyPath>
-		<UnityLibPath>$(MegabonkPath)/BepInEx/unity-libs</UnityLibPath>
-		<PluginPath>$(MegabonkPath)/BepInEx/plugins</PluginPath>
+	  <!-- Use MegabonkPath if provided (local) -->
+	  <AssemblyPath Condition=" '$(MegabonkPath)' != '' ">$(MegabonkPath)/BepInEx/interop</AssemblyPath>
+	  <UnityLibPath Condition=" '$(MegabonkPath)' != '' ">$(MegabonkPath)/BepInEx/unity-libs</UnityLibPath>
+	  <PluginPath Condition=" '$(MegabonkPath)' != '' ">$(MegabonkPath)/BepInEx/plugins</PluginPath>
+
+	  <!-- Otherwise default to the stripper project's committed output (GitHub Actions) -->
+	  <AssemblyPath Condition=" '$(AssemblyPath)' == '' ">$(MSBuildProjectDirectory)/stripped-libs/interop</AssemblyPath>
+	  <UnityLibPath Condition=" '$(UnityLibPath)' == '' ">$(MSBuildProjectDirectory)/stripped-libs/unity-libs</UnityLibPath>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -98,7 +103,8 @@
 		</Reference>
 	</ItemGroup>
 
-	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
-		<Exec Command="xcopy /Y /I &quot;$(TargetDir)&quot; &quot;$(PluginPath)/MegabonkTogether&quot;" Condition="'$(Configuration)' == 'Debug' And '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))'" />
+	<!-- Skip PostBuild copy when running in CI (GitHub Actions or other CI systems setting CI env var) -->
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition=" '$(GITHUB_ACTIONS)' != 'true' And '$(CI)' != 'true' ">
+		<Exec Command="xcopy /Y /I &quot;$(TargetDir)&quot; &quot;$(PluginPath)\\MegabonkTogether&quot;" Condition=" '$(PluginPath)' != '' And '$(Configuration)' == 'Debug' And '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))' " />
 	</Target>
 </Project>

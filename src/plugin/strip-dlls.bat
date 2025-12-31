@@ -1,0 +1,13 @@
+assembly-publicizer "%MegabonkPath%\BepInEx\interop\Assembly-CSharp.dll" --strip-only -o ./stripped-libs/interop/Assembly-CSharp.dll
+assembly-publicizer "%MegabonkPath%\BepInEx\unity-libs\UnityEngine.CoreModule.dll" --strip-only -o ./stripped-libs/unity-libs/UnityEngine.CoreModule.dll
+assembly-publicizer "%MegabonkPath%\BepInEx\unity-libs\UnityEngine.AnimationModule.dll" --strip-only -o ./stripped-libs/unity-libs/UnityEngine.AnimationModule.dll
+assembly-publicizer "%MegabonkPath%\BepInEx\unity-libs\UnityEngine.PhysicsModule.dll" --strip-only -o ./stripped-libs/unity-libs/UnityEngine.PhysicsModule.dll
+assembly-publicizer "%MegabonkPath%\BepInEx\unity-libs\UnityEngine.ParticleSystemModule.dll" --strip-only -o ./stripped-libs/unity-libs/UnityEngine.ParticleSystemModule.dll
+assembly-publicizer "%MegabonkPath%\BepInEx\unity-libs\UnityEngine.AudioModule.dll" --strip-only -o ./stripped-libs/unity-libs/UnityEngine.AudioModule.dll
+assembly-publicizer "%MegabonkPath%\BepInEx\interop\UnityEngine.UI.dll" --strip-only -o ./stripped-libs/interop/UnityEngine.UI.dll
+assembly-publicizer "%MegabonkPath%\BepInEx\interop\Unity.TextMeshPro.dll" --strip-only -o ./stripped-libs/interop/Unity.TextMeshPro.dll
+assembly-publicizer "%MegabonkPath%\BepInEx\interop\Il2Cppmscorlib.dll" --strip-only -o ./stripped-libs/interop/Il2Cppmscorlib.dll
+assembly-publicizer "%MegabonkPath%\BepInEx\interop\Il2CppSystem.dll" --strip-only -o ./stripped-libs/interop/Il2CppSystem.dll
+assembly-publicizer "%MegabonkPath%\BepInEx\interop\Il2CppSystem.Core.dll" --strip-only -o ./stripped-libs/interop/Il2CppSystem.Core.dll
+assembly-publicizer "%MegabonkPath%\BepInEx\interop\Rewired_Core.dll" --strip-only -o ./stripped-libs/interop/Rewired_Core.dll
+assembly-publicizer "%MegabonkPath%\BepInEx\interop\Unity.Localization.dll" --strip-only -o ./stripped-libs/interop/Unity.Localization.dll
