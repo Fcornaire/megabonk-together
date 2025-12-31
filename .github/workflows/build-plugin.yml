@@ -1,0 +1,111 @@
+name: Build MegabonkTogether Plugin
+
+on:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: "6.0.x"
+
+      - name: Restore
+        run: dotnet restore src/plugin/MegabonkTogether.Plugin.csproj
+
+      - name: Build (Release)
+        run: dotnet build src/plugin/MegabonkTogether.Plugin.csproj --configuration Release --no-restore
+
+      - name: Set version from tag
+        id: set_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          VERSION=${VERSION#v}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "ARCHIVE_NAME=Megabonk-Together-${VERSION}.zip" >> $GITHUB_ENV
+
+      - name: Create zip of DLLs
+        run: |
+          OUTPUT_DIR="src/plugin/bin/Release/net6.0"
+          mkdir -p artifacts
+          ZIP="artifacts/${ARCHIVE_NAME}"
+
+          echo "Zipping DLLs from $OUTPUT_DIR into $ZIP"
+
+          shopt -s nullglob || true
+          DLLS=("$OUTPUT_DIR"/*.dll)
+          if [ ${#DLLS[@]} -eq 0 ]; then
+            echo "No dll files found in $OUTPUT_DIR"
+            ls -la "$OUTPUT_DIR" || true
+            exit 1
+          fi
+
+          zip -j "$ZIP" "${DLLS[@]}"
+          ls -la artifacts
+        env:
+          ARCHIVE_NAME: ${{ env.ARCHIVE_NAME }}
+
+      - name: Prepare release notes (diff from previous tag)
+        id: prepare_notes
+        run: |
+          git fetch --tags --prune
+
+          VERSION=${VERSION:-${GITHUB_REF#refs/tags/}}
+          VERSION=${VERSION#v}
+
+          PREV_TAG=$(git for-each-ref --sort=-creatordate --format '%(refname:short)' refs/tags | sed -n '2p' || true)
+
+          if [ -z "$PREV_TAG" ]; then
+            echo "No previous tag found, generating full changelog up to ${VERSION}"
+            RANGE=$(git rev-list --max-parents=0 HEAD)
+            CHANGES=$(git log --pretty=format:'- %s (%h)' ${RANGE}..refs/tags/${VERSION} || true)
+            BODY="Initial release\n\n${CHANGES}"
+          else
+            echo "Previous tag: $PREV_TAG"
+            CHANGES=$(git log --pretty=format:'- %s (%h)' ${PREV_TAG}..refs/tags/${VERSION} || true)
+            BODY="Changes since ${PREV_TAG}:\n\n${CHANGES}"
+          fi
+
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
+          echo "$BODY" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+        env:
+          VERSION: ${{ env.VERSION }}
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ env.VERSION }}
+          release_name: Megabonk-Together-${{ env.VERSION }}
+          body: ${{ env.RELEASE_NOTES }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload release asset (zip)
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: artifacts/${{ env.ARCHIVE_NAME }}
+          asset_name: ${{ env.ARCHIVE_NAME }}
+          asset_content_type: application/zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARCHIVE_NAME }}
+          path: artifacts/${{ env.ARCHIVE_NAME }}

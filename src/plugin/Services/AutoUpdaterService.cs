@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace MegabonkTogether.Common
@@ -189,7 +190,8 @@ namespace MegabonkTogether.Common
         {
             try
             {
-                var asset = release.Assets.FirstOrDefault(a => a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
+                var asset = release.Assets.FirstOrDefault(a =>
+                    Regex.IsMatch(a.Name ?? string.Empty, @"^Megabonk\-Together\-\d+\.\d+\.\d+\.zip$", RegexOptions.IgnoreCase)); //this should pick Megabonk-Together-X.Y.Z.zip
 
                 if (asset == null)
                 {
@@ -199,12 +201,14 @@ namespace MegabonkTogether.Common
 
                 logger.LogInfo($"Downloading update: {asset.Name}");
 
+                var downloadUrl = !string.IsNullOrEmpty(asset.BrowserDownloadUrl) ? asset.BrowserDownloadUrl : asset.Url;
+
                 var pluginDirectory = Path.GetDirectoryName(pluginPath);
                 var downloadPath = Path.Combine(pluginDirectory, UPDATE_FILE_PREFIX + asset.Name);
 
                 CleanupOldUpdateFiles(pluginDirectory);
 
-                await DownloadFile(asset.Url, downloadPath);
+                await DownloadFile(downloadUrl, downloadPath);
 
                 logger.LogInfo($"Update {release.TagName} downloaded. Quit the game to apply.");
 
