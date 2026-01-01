@@ -592,10 +592,21 @@ namespace MegabonkTogether.Scripts.NetPlayer
 
         public void SetHat(HatData hatData)
         {
+            var head = Il2CppFindHelper.RuntimeGetComponentsInChildren<Transform>(Model, true).FirstOrDefault(t => t.name.Contains("Head") && t.name.Contains("end"));
+            if (head == null)
+            {
+                head = Il2CppFindHelper.RuntimeGetComponentsInChildren<Transform>(Model, true).FirstOrDefault(t => t.name.Contains("Hat"));
+            }
+
+            if (head == null)
+            {
+                Plugin.Log.LogWarning("Need to check all character to find their head bone but zzzzzzz");
+                return;
+            }
+
             playerRenderer.rendererObject.SetActive(true);
             playerRenderer.SetHat(hatData);
 
-            var head = Il2CppFindHelper.RuntimeGetComponentsInChildren<Transform>(Model, true).FirstOrDefault(t => t.name == "Head_end");
             playerRenderer.hatTransform.SetParent(head);
             playerRenderer.hatTransform.position = head.position;
             playerRenderer.rendererObject.SetActive(false);

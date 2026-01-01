@@ -176,12 +176,12 @@ namespace MegabonkTogether.Services
                         return;
                     }
 
-                    Plugin.Log.LogInfo($"NAT introduction success to {target}, natType={natType}, token={token}");
+                    Plugin.Log.LogInfo($"NAT introduction success, natType={natType}, token={token}");
 
                     if (netManager != null && netManager.IsRunning)
                     {
-                        Plugin.Log.LogInfo($"Connecting to {target}...");
-                        netManager.Connect(target, "yourKey");
+                        Plugin.Log.LogInfo($"Connecting...");
+                        netManager.Connect(target, "yourKey"); //TODO: technically we should use a key but do we really care ? will check later
                     }
                     else
                     {
@@ -196,10 +196,9 @@ namespace MegabonkTogether.Services
 
             listener.ConnectionRequestEvent += request =>
             {
-                Plugin.Log.LogInfo($"Connection request from {request.RemoteEndPoint}");
+                Plugin.Log.LogInfo($"Got a connection request from remote"); //TODO: technically we should validate the request key here
                 request.Accept();
             };
-
 
             listener.PeerConnectedEvent += peer =>
             {

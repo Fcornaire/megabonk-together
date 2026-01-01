@@ -43,7 +43,7 @@ jobs:
           mkdir -p artifacts
           ZIP="artifacts/${ARCHIVE_NAME}"
 
-          echo "Zipping DLLs, PDBs and BATs from $OUTPUT_DIR into $ZIP"
+          echo "Zipping DLLs, PDBs and BATs from $OUTPUT_DIR into $ZIP)"
 
           shopt -s nullglob || true
 
@@ -67,7 +67,19 @@ jobs:
             exit 1
           fi
 
-          zip -j "$ZIP" "${FILES[@]}"
+          REPO_ROOT="$(pwd)"
+          TMPDIR=$(mktemp -d)
+          DESTDIR="$TMPDIR/Megabonk-Together"
+          mkdir -p "$DESTDIR"
+
+          for src in "${FILES[@]}"; do
+            cp "$src" "$DESTDIR/"
+          done
+
+          (cd "$TMPDIR" && zip -r "$REPO_ROOT/$ZIP" "Megabonk-Together")
+
+          rm -rf "$TMPDIR"
+
           ls -la artifacts
         env:
           ARCHIVE_NAME: ${{ env.ARCHIVE_NAME }}
