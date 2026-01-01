@@ -69,14 +69,14 @@ jobs:
 
           REPO_ROOT="$(pwd)"
           TMPDIR=$(mktemp -d)
-          DESTDIR="$TMPDIR/Megabonk-Together"
+          DESTDIR="$TMPDIR/MegabonkTogether"
           mkdir -p "$DESTDIR"
 
           for src in "${FILES[@]}"; do
             cp "$src" "$DESTDIR/"
           done
 
-          (cd "$TMPDIR" && zip -r "$REPO_ROOT/$ZIP" "Megabonk-Together")
+          (cd "$TMPDIR" && zip -r "$REPO_ROOT/$ZIP" "MegabonkTogether")
 
           rm -rf "$TMPDIR"
 
