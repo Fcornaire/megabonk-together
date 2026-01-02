@@ -20,7 +20,7 @@ Megabonk together is a WIP mod that bring netplay to megabonk.
 
 This mod feature:
 
-- Peer to peer online up to 6 players (Relay transport for ipv6 addresses)
+- Peer to peer online up to 6 players (Relay transport for ipv6 addresses or when ipv4 direct connection failed)
 - Mostly (not all) in game mechanics synchronized
   - Weapons (also their updgrade)
   - Projectiles (not perfect for all)

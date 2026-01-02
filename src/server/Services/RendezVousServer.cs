@@ -140,14 +140,20 @@ namespace MegabonkTogether.Server.Services
                     string role = parts[0];
                     string hostId = parts[1];
                     string peerId = parts[2];
+                    bool forceRelay = parts.Length > 3 && parts[3] == "force_relay";
+
+                    if (forceRelay)
+                    {
+                        logger.LogInformation($"Force relay mode requested for {role} {peerId}");
+                    }
 
                     if (role == "host")
                     {
-                        HandleHostRegistration(hostId, localEndpoint, remoteEndpoint);
+                        HandleHostRegistration(hostId, localEndpoint, remoteEndpoint, forceRelay);
                     }
                     else
                     {
-                        HandleClientRegistration(hostId, peerId, localEndpoint, remoteEndpoint);
+                        HandleClientRegistration(hostId, peerId, localEndpoint, remoteEndpoint, forceRelay);
                     }
                 }
                 catch (Exception ex)
@@ -309,7 +315,7 @@ namespace MegabonkTogether.Server.Services
             }
         }
 
-        private void HandleHostRegistration(string hostId, IPEndPoint localEndpoint, IPEndPoint remoteEndpoint)
+        private void HandleHostRegistration(string hostId, IPEndPoint localEndpoint, IPEndPoint remoteEndpoint, bool forceRelay = false)
         {
             registeredHosts[hostId] = new HostInfo
             {
@@ -317,7 +323,7 @@ namespace MegabonkTogether.Server.Services
                 Remote = remoteEndpoint
             };
 
-            logger.LogInformation($"HOST registered: {hostId} | Local: {localEndpoint} | External: {remoteEndpoint}");
+            logger.LogInformation($"HOST registered: {hostId} | Local: {localEndpoint} | External: {remoteEndpoint}{(forceRelay ? " | Force Relay: true" : "")}");
 
             if (pendingClients.TryGetValue(hostId, out var waitingClients))
             {
@@ -327,7 +333,7 @@ namespace MegabonkTogether.Server.Services
 
                 foreach (var client in clientsList)
                 {
-                    ConnectHostAndClient(hostId, client.ClientId, registeredHosts[hostId], client.Local, client.Remote);
+                    ConnectHostAndClient(hostId, client.ClientId, registeredHosts[hostId], client.Local, client.Remote, forceRelay);
                 }
 
                 pendingClients.TryRemove(hostId, out _);
@@ -338,12 +344,12 @@ namespace MegabonkTogether.Server.Services
             }
         }
 
-        private void HandleClientRegistration(string hostId, string clientId, IPEndPoint localEndpoint, IPEndPoint remoteEndpoint)
+        private void HandleClientRegistration(string hostId, string clientId, IPEndPoint localEndpoint, IPEndPoint remoteEndpoint, bool forceRelay = false)
         {
             if (registeredHosts.TryGetValue(hostId, out var host))
             {
                 logger.LogInformation($"{hostId} already registered, connecting client {clientId} immediately");
-                ConnectHostAndClient(hostId, clientId, host, localEndpoint, remoteEndpoint);
+                ConnectHostAndClient(hostId, clientId, host, localEndpoint, remoteEndpoint, forceRelay);
             }
             else
             {
@@ -361,9 +367,14 @@ namespace MegabonkTogether.Server.Services
             }
         }
 
-        private void ConnectHostAndClient(string hostId, string clientId, HostInfo host, IPEndPoint clientLocal, IPEndPoint clientRemote)
+        private void ConnectHostAndClient(string hostId, string clientId, HostInfo host, IPEndPoint clientLocal, IPEndPoint clientRemote, bool forceRelay = false)
         {
             var pairKey = $"{hostId}_{clientId}";
+
+            if (forceRelay)
+            {
+                pairKey += "_forceRelay";
+            }
 
             if (!processedPairs.TryAdd(pairKey, new ProcessedPair()))
             {
@@ -378,7 +389,8 @@ namespace MegabonkTogether.Server.Services
                 IPEndPoint clientInternal = clientLocal;
                 IPEndPoint clientExternal = clientRemote;
 
-                if (hostExternal.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6 ||
+                if (forceRelay ||
+                    hostExternal.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6 ||
                     clientExternal.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6 ||
                     hostInternal.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6 ||
                     clientInternal.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)

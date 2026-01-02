@@ -91,6 +91,7 @@ namespace MegabonkTogether.Services
         private readonly object relayPeerLock = new();
 
         private ConcurrentDictionary<string, bool> tokens = new();
+        private bool hasTriedForceRelay = false;
 
         private const int POLL_INTERVAL_MS = 5;
 
@@ -897,10 +898,11 @@ namespace MegabonkTogether.Services
             hasStarted = false;
             gamePeersIntroduced.Clear();
             gamePeersIntroducedByRelay.Clear();
+            hasTriedForceRelay = false;
 
             lock (relayPeerLock)
             {
-                relayPeer.Disconnect();
+                relayPeer?.Disconnect();
                 relayPeer = null;
             }
             usesRelay.Clear();
@@ -1014,7 +1016,7 @@ namespace MegabonkTogether.Services
 
             });
 
-            var timeoutTask = Task.Delay(30000);
+            var timeoutTask = Task.Delay(15000);
             var completedTask = await Task.WhenAny(natPunchComplete.Task, timeoutTask);
 
             if (completedTask == natPunchComplete.Task && await natPunchComplete.Task)
@@ -1024,7 +1026,46 @@ namespace MegabonkTogether.Services
             }
             else
             {
-                Plugin.Log.LogError($"P2P connection timeout - only {gamePeers.Count}/{expectedPeerCount} peers connected");
+                if (!hasTriedForceRelay)
+                {
+                    Plugin.Log.LogWarning($"P2P connection timeout - only {gamePeers.Count + usesRelay.Count}/{expectedPeerCount} peers connected, retrying with forced relay mode...");
+                    hasTriedForceRelay = true;
+
+                    var forceRelayToken = $"{role}|{hostId}|{selfConnectionId}|force_relay";
+                    Plugin.Log.LogInfo($"Sending NAT punch request with force relay: {forceRelayToken}");
+                    netManager.NatPunchModule.SendNatIntroduceRequest(rdvServerHost, (int)rdvServerPort, forceRelayToken);
+
+                    natPunchComplete = new TaskCompletionSource<bool>();
+
+                    var retryPollTask = Task.Run(async () =>
+                    {
+                        while (true)
+                        {
+                            bool relayConnected;
+                            lock (relayPeerLock)
+                            {
+                                relayConnected = relayPeer != null;
+                            }
+                            if (gamePeers.Count + usesRelay.Count >= expectedPeerCount && (!usesRelay.Any() || relayConnected))
+                                break;
+                            Poll();
+                            await Task.Delay(POLL_INTERVAL_MS);
+                        }
+                        hasAllPeersConnected = true;
+                        natPunchComplete.SetResult(true);
+                    });
+
+                    var retryTimeoutTask = Task.Delay(15000);
+                    var retryCompletedTask = await Task.WhenAny(natPunchComplete.Task, retryTimeoutTask);
+
+                    if (retryCompletedTask == natPunchComplete.Task && await natPunchComplete.Task)
+                    {
+                        Plugin.Log.LogInfo($"P2P connections successful with forced relay! Connected to {gamePeers.Count + usesRelay.Count} peers");
+                        return true;
+                    }
+                }
+
+                Plugin.Log.LogError($"P2P connection timeout - only {gamePeers.Count + usesRelay.Count}/{expectedPeerCount} peers connected");
                 return gamePeers.Count + usesRelay.Count > 0;
             }
         }
