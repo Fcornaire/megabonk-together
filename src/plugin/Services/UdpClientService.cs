@@ -22,6 +22,7 @@ namespace MegabonkTogether.Services
         public uint ConnectionId { get; internal set; }
         public bool IsHost { get; internal set; }
         public bool HasSelected { get; set; }
+        public int Latency { get; set; }
 
         public PeerIntroduction(string name, uint connectionId, bool isHost, bool hasSelected = false)
         {
@@ -29,6 +30,7 @@ namespace MegabonkTogether.Services
             ConnectionId = connectionId;
             IsHost = isHost;
             HasSelected = hasSelected;
+            Latency = 0;
         }
     }
 
@@ -58,6 +60,7 @@ namespace MegabonkTogether.Services
 
         public int GetNetPeerCount();
         public bool AreAllPeersReady();
+        public int GetLatency(uint connectionId);
     }
     internal class UdpClientService : IUdpClientService
     {
@@ -273,7 +276,12 @@ namespace MegabonkTogether.Services
 
             listener.NetworkLatencyUpdateEvent += (peer, latency) =>
             {
-                //Plugin.Log.LogInfo($"Latency to {peer.Address}: {latency}ms");
+                var peerIntro = gamePeersIntroduced.FirstOrDefault(p => p.Key == peer.Id);
+                if (peerIntro.Value != null)
+                {
+                    peerIntro.Value.Latency = latency;
+                    gamePeersIntroduced[peerIntro.Key] = peerIntro.Value;
+                }
             };
 
             listener.NetworkReceiveUnconnectedEvent += (endPoint, reader, messageType) =>
@@ -1438,6 +1446,40 @@ namespace MegabonkTogether.Services
         public bool HasAllPeersConnected()
         {
             return hasAllPeersConnected;
+        }
+
+        public int GetLatency(uint connectionId)
+        {
+            if (isHost.HasValue && isHost.Value)
+            {
+                var peerIntro = gamePeersIntroduced.FirstOrDefault(p => p.Value.ConnectionId == connectionId);
+                if (peerIntro.Value != null)
+                {
+                    return peerIntro.Value.Latency;
+                }
+
+                var peerIntroByRelay = gamePeersIntroducedByRelay.FirstOrDefault(p => p.Value.ConnectionId == connectionId);
+                if (peerIntroByRelay.Value != null)
+                {
+                    return peerIntroByRelay.Value.Latency;
+                }
+            }
+            else
+            {
+                var peerIntro = gamePeersIntroduced.FirstOrDefault(p => p.Value.ConnectionId == connectionId);
+                if (peerIntro.Value != null)
+                {
+                    return peerIntro.Value.Latency;
+                }
+
+                var peerIntroByRelay = gamePeersIntroducedByRelay.FirstOrDefault(p => p.Value.ConnectionId == connectionId);
+                if (peerIntroByRelay.Value != null)
+                {
+                    return peerIntroByRelay.Value.Latency;
+                }
+            }
+
+            return -1;
         }
 
         public void SendToAllClientsExcept<T>(int netPlayerId, uint sender, T data) where T : IGameNetworkMessage
