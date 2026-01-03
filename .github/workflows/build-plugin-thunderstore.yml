@@ -62,7 +62,7 @@ jobs:
           BepInEx-BepInExPack = "IL2CPP-6.0.738"
 
           [build]
-          icon = "./icon.png"
+          icon = "./images/icon.png"
           readme = "./README.md"
           outdir = "./build"
 
@@ -117,11 +117,11 @@ jobs:
 
       - name: Verify icon exists
         run: |
-          if [ ! -f "icon.png" ]; then
-            echo "Error: icon.png not found! Please add a 256x256 PNG icon to the repository root."
+          if [ ! -f "images/icon.png" ]; then
+            echo "Error: images/icon.png not found! Please add a 256x256 PNG icon to the images/ directory."
             exit 1
           fi
-          echo "Icon found: icon.png"
+          echo "Icon found: images/icon.png"
 
       - name: Build Thunderstore package with tcli
         run: |
