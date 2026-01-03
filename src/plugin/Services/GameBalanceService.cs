@@ -51,19 +51,19 @@ namespace MegabonkTogether.Services
         {
             float baseMultiplier = GetDifficultyLevelByPlayers() switch
             {
-                DifficultyLevel.Duo => 1.05f,
-                DifficultyLevel.Trio => 1.15f,
-                DifficultyLevel.Quad => 1.30f,
-                DifficultyLevel.Five => 1.50f,
-                DifficultyLevel.Six => 1.70f,
+                DifficultyLevel.Duo => 1.02f,
+                DifficultyLevel.Trio => 1.05f,
+                DifficultyLevel.Quad => 1.10f,
+                DifficultyLevel.Five => 1.15f,
+                DifficultyLevel.Six => 1.30f,
                 _ => 1.0f,
             };
 
             float stageMultiplier = StageIndex switch
             {
                 0 => 1.0f,
-                1 => 1.15f,
-                2 => 1.35f,
+                1 => 1.10f,
+                2 => 1.20f,
                 _ => 1.0f
             };
 
