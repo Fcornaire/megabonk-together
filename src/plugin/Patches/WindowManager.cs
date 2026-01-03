@@ -11,6 +11,7 @@ namespace MegabonkTogether.Patches
     internal static class WindowManagerPatches
     {
         private static readonly IAutoUpdaterService autoUpdaterService = Plugin.Services.GetService<IAutoUpdaterService>();
+        private static bool hasShownUpdateModal = false;
 
         /// <summary>
         /// Reset networking and net players displayer when going back to main menu/
@@ -38,6 +39,8 @@ namespace MegabonkTogether.Patches
                     CoroutineRunner.Instance.Stop(SpawnPlayerPortalPatches.WaitForLobbyCoroutine);
                 }
 
+                if (autoUpdaterService.IsThunderstoreBuild() && hasShownUpdateModal) return;
+
                 Task.Run(async () =>
                 {
                     await autoUpdaterService.CheckAndUpdate();
@@ -45,6 +48,11 @@ namespace MegabonkTogether.Patches
                     if (autoUpdaterService.IsAnUpdateAvailable())
                     {
                         Plugin.ShowUpdateAvailableModal();
+
+                        if (autoUpdaterService.IsThunderstoreBuild())
+                        {
+                            hasShownUpdateModal = true;
+                        }
 
                         if (Plugin.Instance.PlayTogetherButton == null)
                         {

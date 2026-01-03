@@ -16,6 +16,17 @@ namespace MegabonkTogether.Scripts.Modal
         protected override void OnUICreated()
         {
             CreateVersionText();
+
+            if (autoUpdaterService.IsThunderstoreBuild())
+            {
+                System.Threading.Tasks.Task.Run(async () =>
+                {
+                    await System.Threading.Tasks.Task.Delay(3500);
+                    this.CloseModal();
+                });
+                return;
+            }
+
             CreateUpdateButton();
         }
 
@@ -32,7 +43,14 @@ namespace MegabonkTogether.Scripts.Modal
             rectTransform.sizeDelta = new Vector2(450, 120);
 
             var text = textObj.AddComponent<TextMeshProUGUI>();
-            text.text = $"Version {autoUpdaterService.GetDownloadedVersion()}\ndownloaded and ready\nto be applied! Restart the game after the update!";
+            if (autoUpdaterService.IsThunderstoreBuild())
+            {
+                text.text = $"Version {autoUpdaterService.GetDownloadedVersion()}\nis available!\nPlease update through Thunderstore mod manager.";
+            }
+            else
+            {
+                text.text = $"Version {autoUpdaterService.GetDownloadedVersion()}\ndownloaded and ready\nto be applied! Restart the game after the update!";
+            }
             text.alignment = TextAlignmentOptions.Center;
             text.fontSize = 30;
             text.color = Color.white;
@@ -74,6 +92,12 @@ namespace MegabonkTogether.Scripts.Modal
         private void OnUpdateClicked()
         {
             AudioManager.Instance.PlaySfx(AudioManager.Instance.uiSelect.sounds[0]);
+
+            if (autoUpdaterService.IsThunderstoreBuild())
+            {
+                return;
+            }
+
             Application.Quit();
         }
     }

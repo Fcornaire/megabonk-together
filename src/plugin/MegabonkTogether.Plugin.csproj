@@ -4,7 +4,7 @@
     <TargetFramework>net6.0</TargetFramework>
     <AssemblyName>MegabonkTogether</AssemblyName>
     <Product>MegabonkTogether</Product>
-    <Version>1.2.0</Version>
+    <Version>1.3.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>
@@ -13,6 +13,11 @@
       https://nuget.samboy.dev/v3/index.json
     </RestoreAdditionalProjectSources>
     <RootNamespace>MegabonkTogether</RootNamespace>
+  </PropertyGroup>
+
+  <!-- Define THUNDERSTORE when THUNDERSTORE_BUILD environment variable is set (For GitHub Actions) -->
+  <PropertyGroup Condition=" '$(THUNDERSTORE_BUILD)' == 'true' ">
+    <DefineConstants>$(DefineConstants);THUNDERSTORE</DefineConstants>
   </PropertyGroup>
 
 	<PropertyGroup>

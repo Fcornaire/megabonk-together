@@ -44,7 +44,7 @@ namespace MegabonkTogether.Common
         string GetDownloadedVersion();
         public void LaunchUpdaterOnExit(string pluginDirectory);
         public string GetLatestVersion();
-
+        public bool IsThunderstoreBuild();
     }
 
     public class AutoUpdaterService : IAutoUpdaterService
@@ -60,6 +60,12 @@ namespace MegabonkTogether.Common
         private bool isUpdateAvailable = false;
         private string downloadedVersion = "";
         private string latestVersion = "";
+
+#if THUNDERSTORE
+        private bool isThunderstoreBuild = true;
+#else
+        private bool isThunderstoreBuild = false;
+#endif
 
         public AutoUpdaterService(ManualLogSource logger)
         {
@@ -86,6 +92,11 @@ namespace MegabonkTogether.Common
         public bool IsAnUpdateAvailable()
         {
             return isUpdateAvailable;
+        }
+
+        public bool IsThunderstoreBuild()
+        {
+            return isThunderstoreBuild;
         }
 
         public string GetDownloadedVersion()
@@ -134,6 +145,15 @@ namespace MegabonkTogether.Common
                 if (IsNewerVersion(latestRelease.TagName, currentVersion))
                 {
                     logger.LogInfo($"New version available: {latestRelease.TagName} (current: {currentVersion})");
+
+                    if (isThunderstoreBuild)
+                    {
+                        logger.LogInfo("Thunderstore build detected - update download is disabled. Please update through Thunderstore.");
+                        isUpdateAvailable = true;
+                        downloadedVersion = latestRelease.TagName;
+                        return true;
+                    }
+
                     isUpdateAvailable = await PrepareUpdate(latestRelease);
                     if (isUpdateAvailable)
                     {
@@ -409,6 +429,12 @@ namespace MegabonkTogether.Common
 
         public void LaunchUpdaterOnExit(string pluginDirectory)
         {
+            if (isThunderstoreBuild)
+            {
+                logger.LogInfo("Thunderstore build - updater launch is disabled");
+                return;
+            }
+
             try
             {
                 logger.LogInfo("=== Updater ===");

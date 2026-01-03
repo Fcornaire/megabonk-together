@@ -151,7 +151,7 @@ namespace MegabonkTogether
                     try
                     {
                         var updateAvailable = await autoUpdaterService.CheckAndUpdate();
-                        if (updateAvailable)
+                        if (updateAvailable && !autoUpdaterService.IsThunderstoreBuild())
                         {
                             Log.LogInfo("An update has been downloaded and will be applied when you quit the game.");
                         }
@@ -381,8 +381,6 @@ namespace MegabonkTogether
         public static void ShowUpdateAvailableModal()
         {
             var go = new GameObject("UpdateAvailableModal");
-            GameObject.DontDestroyOnLoad(go);
-
             go.AddComponent<UpdateAvailableModal>();
         }
 

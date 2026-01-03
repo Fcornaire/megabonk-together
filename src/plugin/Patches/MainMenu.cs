@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using MegabonkTogether.Common;
 using MegabonkTogether.Scripts.Button;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,6 +11,7 @@ namespace MegabonkTogether.Patches
     {
         private static readonly ISynchronizationService synchronizationService = Plugin.Services.GetRequiredService<ISynchronizationService>();
         private static readonly IPlayerManagerService playerManagerService = Plugin.Services.GetRequiredService<IPlayerManagerService>();
+        private static readonly IAutoUpdaterService autoUpdaterService = Plugin.Services.GetRequiredService<IAutoUpdaterService>();
 
         /// <summary>
         /// Add "TOGETHER!" button to main menu
@@ -53,6 +55,11 @@ namespace MegabonkTogether.Patches
 
             Plugin.Instance.PlayTogetherButton = customButton;
             Plugin.Instance.SetMainMenu(__instance);
+
+            if (autoUpdaterService.IsThunderstoreBuild() && autoUpdaterService.IsAnUpdateAvailable())
+            {
+                customButton.gameObject.SetActive(false);
+            }
         }
 
         /// <summary>

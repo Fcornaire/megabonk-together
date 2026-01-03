@@ -1,0 +1,142 @@
+﻿name: Build and Publish to Thunderstore
+
+on:
+  push:
+    tags:
+      - "*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to override if needed'
+        required: true
+        default: '1.3.0-rc'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish-thunderstore:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: "6.0.x"
+
+      - name: Install tcli
+        run: dotnet tool install -g tcli
+
+      - name: Set version from tag or input
+        id: set_version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION=${GITHUB_REF#refs/tags/}
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "ARCHIVE_NAME=Megabonk-Together-Thunderstore-${VERSION}.zip" >> $GITHUB_ENV
+          echo "Using version: $VERSION"
+
+      - name: Generate thunderstore.toml
+        run: |
+          cat > thunderstore.toml << 'EOF'
+          [config]
+          schemaVersion = "0.0.1"
+
+          [package]
+          namespace = "Fcornaire"
+          name = "MegabonkTogether"
+          versionNumber = "${{ env.VERSION }}"
+          description = "Play Megabonk over netplay!"
+          websiteUrl = "https://github.com/Fcornaire/megabonk-together"
+          containsNsfwContent = false
+
+          [package.dependencies]
+          BepInEx-BepInExPack = "IL2CPP-6.0.738"
+
+          [build]
+          icon = "./icon.png"
+          readme = "./README.md"
+          outdir = "./build"
+
+          [[build.copy]]
+          source = "./artifacts/MegabonkTogether"
+          target = "MegabonkTogether"
+
+          [publish]
+          repository = "https://thunderstore.io"
+          communities = ["megabonk"]
+          categories = ["mods"]
+          EOF
+          
+          echo "Generated thunderstore.toml:"
+          cat thunderstore.toml
+
+      - name: Restore
+        run: dotnet restore src/plugin/MegabonkTogether.Plugin.csproj
+
+      - name: Build (Release) with THUNDERSTORE flag
+        run: dotnet build src/plugin/MegabonkTogether.Plugin.csproj --configuration Release --no-restore
+        env:
+          THUNDERSTORE_BUILD: "true"
+
+      - name: Prepare artifacts for Thunderstore
+        run: |
+          OUTPUT_DIR="src/plugin/bin/Release/net6.0"
+          THUNDERSTORE_DIR="artifacts/MegabonkTogether"
+          
+          mkdir -p "$THUNDERSTORE_DIR"
+
+          echo "Copying DLLs and PDBs from $OUTPUT_DIR to $THUNDERSTORE_DIR"
+
+          shopt -s nullglob || true
+
+          for f in "$OUTPUT_DIR"/*.dll; do
+            [ -e "$f" ] && cp "$f" "$THUNDERSTORE_DIR/"
+          done
+
+          for f in "$OUTPUT_DIR"/*.pdb; do
+            [ -e "$f" ] && cp "$f" "$THUNDERSTORE_DIR/"
+          done
+
+          if [ ! "$(ls -A $THUNDERSTORE_DIR)" ]; then
+            echo "No files copied to $THUNDERSTORE_DIR"
+            ls -la "$OUTPUT_DIR" || true
+            exit 1
+          fi
+
+          echo "Files in $THUNDERSTORE_DIR:"
+          ls -la "$THUNDERSTORE_DIR"
+
+      - name: Verify icon exists
+        run: |
+          if [ ! -f "icon.png" ]; then
+            echo "Error: icon.png not found! Please add a 256x256 PNG icon to the repository root."
+            exit 1
+          fi
+          echo "Icon found: icon.png"
+
+      - name: Build Thunderstore package with tcli
+        run: |
+          echo "Building Thunderstore package..."
+          tcli build --config-path thunderstore.toml 
+
+      - name: Publish to Thunderstore with tcli
+        run: |
+          echo "Publishing to Thunderstore..."
+          tcli publish --config-path thunderstore.toml --file build/Fcornaire-MegabonkTogether-${{ env.VERSION }}.zip
+        env:
+          TCLI_AUTH_TOKEN: ${{ secrets.THUNDERSTORE_TOKEN }}
+
+      - name: Upload Thunderstore artifact to GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARCHIVE_NAME }}
+          path: build/Fcornaire-MegabonkTogether-${{ env.VERSION }}.zip
