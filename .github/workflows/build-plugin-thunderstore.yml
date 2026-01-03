@@ -59,7 +59,7 @@ jobs:
           containsNsfwContent = false
 
           [package.dependencies]
-          BepInEx-BepInExPack = "IL2CPP-6.0.738"
+          BepInEx-BepInExPack_IL2CPP = "6.0.738"
 
           [build]
           icon = "./images/icon.png"
