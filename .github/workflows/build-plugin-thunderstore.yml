@@ -131,7 +131,7 @@ jobs:
       - name: Publish to Thunderstore with tcli
         run: |
           echo "Publishing to Thunderstore..."
-          tcli publish --config-path thunderstore.toml --file build/Fcornaire-MegabonkTogether-${{ env.VERSION }}.zip
+          tcli publish --config-path thunderstore.toml --file build/DShad-MegabonkTogether-${{ env.VERSION }}.zip
         env:
           TCLI_AUTH_TOKEN: ${{ secrets.THUNDERSTORE_TOKEN }}
 
@@ -139,4 +139,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ARCHIVE_NAME }}
-          path: build/Fcornaire-MegabonkTogether-${{ env.VERSION }}.zip
+          path: build/DShad-MegabonkTogether-${{ env.VERSION }}.zip
