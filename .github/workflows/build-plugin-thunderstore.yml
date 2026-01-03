@@ -41,7 +41,6 @@ jobs:
             VERSION=${GITHUB_REF#refs/tags/}
           fi
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "ARCHIVE_NAME=Megabonk-Together-Thunderstore-${VERSION}.zip" >> $GITHUB_ENV
           echo "Using version: $VERSION"
 
       - name: Generate thunderstore.toml
@@ -134,9 +133,3 @@ jobs:
           tcli publish --config-path thunderstore.toml --file build/DShad-MegabonkTogether-${{ env.VERSION }}.zip
         env:
           TCLI_AUTH_TOKEN: ${{ secrets.THUNDERSTORE_TOKEN }}
-
-      - name: Upload Thunderstore artifact to GitHub
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.ARCHIVE_NAME }}
-          path: build/DShad-MegabonkTogether-${{ env.VERSION }}.zip
