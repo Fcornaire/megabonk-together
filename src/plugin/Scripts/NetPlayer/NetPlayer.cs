@@ -52,7 +52,7 @@ namespace MegabonkTogether.Scripts.NetPlayer
         private GameObject minimapIcon;
         private GameObject nameplate;
         private TextMeshProUGUI nameplateText;
-
+        private bool isDead;
         private const float NAMEPLATE_MAX_DISTANCE = 100f;
         private const float NAMEPLATE_Y_OFFSET = 5.0f;
 
@@ -66,6 +66,14 @@ namespace MegabonkTogether.Scripts.NetPlayer
         protected void Update()
         {
             if (Model == null) return;
+
+            UpdateNameplateText();
+            UpdateNameplateRotation();
+
+            if (isDead)
+            {
+                return;
+            }
 
             if (GameManager.Instance.player.inventory != null && !hasInitializedConstantAttacks)
             {
@@ -92,8 +100,7 @@ namespace MegabonkTogether.Scripts.NetPlayer
                 }
             }
 
-            UpdateNameplateText();
-            UpdateNameplateRotation();
+
         }
 
         public void FixedUpdate()
@@ -106,6 +113,11 @@ namespace MegabonkTogether.Scripts.NetPlayer
             }
 
             if (inventory == null)
+            {
+                return;
+            }
+
+            if (isDead)
             {
                 return;
             }
@@ -612,11 +624,22 @@ namespace MegabonkTogether.Scripts.NetPlayer
             playerRenderer.rendererObject.SetActive(false);
         }
 
+        public Material[] GetActiveMaterials()
+        {
+            return playerRenderer.activeMaterials;
+        }
+
         public void OnDied()
         {
             Model.SetActive(false);
-            Inventory.weaponInventory.Cleanup();
-            Inventory.itemInventory.Cleanup();
+            isDead = true;
+        }
+
+        public void Respawn(Vector3 position)
+        {
+            isDead = false;
+            Model.SetActive(true);
+            Model.transform.position = position;
         }
     }
 }

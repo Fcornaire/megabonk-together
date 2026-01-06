@@ -152,7 +152,7 @@ namespace MegabonkTogether.Scripts.NetPlayer
         {
             if (fillRect == null || text == null) return;
 
-            targetFillAmount = max > 0 ? current / max : 0f;
+            targetFillAmount = max > 0 ? Mathf.Clamp01(current / max) : 0f;
             text.text = $"{(int)current}/{(int)max}";
         }
 
@@ -160,7 +160,7 @@ namespace MegabonkTogether.Scripts.NetPlayer
         {
             if (fillRect == null || text == null) return;
 
-            float fillAmount = max > 0 ? current / max : 0f;
+            float fillAmount = max > 0 ? Mathf.Clamp01(current / max) : 0f;
             currentFillAmount = fillAmount;
             targetFillAmount = fillAmount;
             fillRect.sizeDelta = new Vector2(maxWidth * fillAmount, 0);
@@ -169,11 +169,15 @@ namespace MegabonkTogether.Scripts.NetPlayer
 
         public void Resize(float width, float barHeight)
         {
-            maxWidth = width;
-
             if (backgroundRect != null)
             {
                 backgroundRect.sizeDelta = new Vector2(width, barHeight);
+            }
+
+            if (fillRect != null)
+            {
+                maxWidth = width;
+                fillRect.sizeDelta = new Vector2(maxWidth * currentFillAmount, 0);
             }
 
             if (text != null)

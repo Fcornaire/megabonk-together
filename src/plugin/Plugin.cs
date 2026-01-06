@@ -15,6 +15,7 @@ using MegabonkTogether.Helpers;
 using MegabonkTogether.Scripts;
 using MegabonkTogether.Scripts.Button;
 using MegabonkTogether.Scripts.Enemies;
+using MegabonkTogether.Scripts.Interactables;
 using MegabonkTogether.Scripts.Modal;
 using MegabonkTogether.Scripts.NetPlayer;
 using MegabonkTogether.Scripts.Snapshot;
@@ -68,6 +69,9 @@ namespace MegabonkTogether
         public bool CAN_DAMAGE_ENEMIES = false;
         public bool IS_HOST_READY = false;
         public bool IS_MANUAL_INVINCIBLE = false;
+
+        public uint? CurrentReviver = null;
+
         private Vector3 WorldSize = Vector3.zero;
         public Vector3 OriginalWorldSize = Vector3.zero;
         public bool HasDungeonTimerStarted = false;
@@ -110,6 +114,7 @@ namespace MegabonkTogether
             ClassInjector.RegisterTypeInIl2Cpp<LoadingModal>();
             ClassInjector.RegisterTypeInIl2Cpp<UpdateAvailableModal>();
             ClassInjector.RegisterTypeInIl2Cpp<TargetSwitcher>();
+            ClassInjector.RegisterTypeInIl2Cpp<InteractableReviver>();
 
             var builder = new HostBuilder();
 

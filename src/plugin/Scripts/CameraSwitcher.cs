@@ -8,8 +8,16 @@ using UnityEngine;
 
 namespace MegabonkTogether.Scripts
 {
+    public class CameraState
+    {
+        public Vector3 position;
+        public Quaternion rotation;
+    }
+
     public class CameraSwitcher : MonoBehaviour
     {
+        private CameraState? originalCameraState;
+
         private float cameraDistance = 10f;
         private float cameraRadius = 0.3f;
         private float currentZ = 10f;
@@ -38,6 +46,9 @@ namespace MegabonkTogether.Scripts
 
         private IPlayerManagerService playerManager;
         private bool isUIInitialized = false;
+
+        private bool wasLeftClickPressed = false;
+        private bool wasRightClickPressed = false;
 
         private void Awake()
         {
@@ -192,6 +203,14 @@ namespace MegabonkTogether.Scripts
         /// </summary>
         public void SwitchToTarget(uint targetId)
         {
+            SaveOriginalCamera();
+
+            var playerCam = GameManager.Instance?.playerCamera;
+            if (playerCam != null && playerCam.enabled)
+            {
+                playerCam.enabled = false;
+            }
+
             var allNetPlayers = playerManager.GetAllSpawnedNetPlayers().ToList();
             var target = allNetPlayers.FirstOrDefault(p => p.ConnectionId == targetId);
             var index = allNetPlayers.IndexOf(target);
@@ -229,6 +248,14 @@ namespace MegabonkTogether.Scripts
 
         public void ResetToLocalPlayer()
         {
+            RestoreOriginalCamera();
+
+            var playerCam = GameManager.Instance?.playerCamera;
+            if (playerCam != null)
+            {
+                playerCam.enabled = true;
+            }
+
             isFollowingTarget = false;
             targetTransform = null;
             targetPlayerName = "";
@@ -254,8 +281,6 @@ namespace MegabonkTogether.Scripts
             isUIInitialized = false;
             Destroy(deathMessageUI);
             Destroy(spectatorInfoUI);
-
-
         }
 
         public void StopFollowing()
@@ -322,14 +347,20 @@ namespace MegabonkTogether.Scripts
         {
             if (!isFollowingTarget) return;
 
-            if (BepInEx.Unity.IL2CPP.UnityEngine.Input.GetKeyInt((BepInEx.Unity.IL2CPP.UnityEngine.KeyCode)KeyCode.Mouse0)) // Left click
+            bool isLeftClickPressed = BepInEx.Unity.IL2CPP.UnityEngine.Input.GetKeyInt((BepInEx.Unity.IL2CPP.UnityEngine.KeyCode)KeyCode.Mouse0);
+            bool isRightClickPressed = BepInEx.Unity.IL2CPP.UnityEngine.Input.GetKeyInt((BepInEx.Unity.IL2CPP.UnityEngine.KeyCode)KeyCode.Mouse1);
+
+            if (isLeftClickPressed && !wasLeftClickPressed)
             {
                 PreviousPlayer();
             }
-            else if (BepInEx.Unity.IL2CPP.UnityEngine.Input.GetKeyInt((BepInEx.Unity.IL2CPP.UnityEngine.KeyCode)KeyCode.Mouse1)) // Right click
+            else if (isRightClickPressed && !wasRightClickPressed)
             {
                 NextPlayer();
             }
+
+            wasLeftClickPressed = isLeftClickPressed;
+            wasRightClickPressed = isRightClickPressed;
         }
 
         public void LateUpdate()
@@ -372,6 +403,37 @@ namespace MegabonkTogether.Scripts
             cameraTransform.position = finalPosition;
 
             cameraTransform.LookAt(smoothedTargetPosition);
+        }
+
+        private void SaveOriginalCamera()
+        {
+            if (originalCameraState != null) return;
+
+            var cam = GameManager.Instance?.playerCamera;
+            if (cam == null || cam.camera == null) return;
+
+            originalCameraState = new CameraState
+            {
+                position = cam.camera.transform.position,
+                rotation = cam.camera.transform.rotation,
+            };
+        }
+
+        private void RestoreOriginalCamera()
+        {
+            if (originalCameraState == null) return;
+
+            var cam = GameManager.Instance?.playerCamera;
+            if (cam == null || cam.camera == null) return;
+
+            var state = originalCameraState;
+
+            cam.camera.transform.position = state.position;
+            cam.camera.transform.rotation = state.rotation;
+
+            cam.UpdateZoom();
+
+            originalCameraState = null;
         }
     }
 }

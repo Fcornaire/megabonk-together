@@ -26,7 +26,7 @@ namespace MegabonkTogether.Patches
 
             if (!GameManager.Instance.player.playerInput.CanInput())
             {
-                Plugin.Log.LogWarning($"Player can't move yet, skipping reward pop for now");
+                //Plugin.Log.LogWarning($"Player can't move yet, skipping reward pop for now");
                 return false;
             }
 
@@ -69,7 +69,7 @@ namespace MegabonkTogether.Patches
             var currentQueue = __instance.rewardQueue;
             if (currentQueue.Count > 0 && !__instance.encounterInProgress)
             {
-                Plugin.Log.LogInfo($"Pop previously missed reward");
+                //Plugin.Log.LogInfo($"Pop previously missed reward");
                 __instance.PopReward();
             }
         }

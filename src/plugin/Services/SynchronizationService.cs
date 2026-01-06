@@ -29,6 +29,7 @@ using MegabonkTogether.Common.Models;
 using MegabonkTogether.Extensions;
 using MegabonkTogether.Helpers;
 using MegabonkTogether.Patches;
+using MegabonkTogether.Scripts.Interactables;
 using MegabonkTogether.Scripts.Snapshot;
 using MonoMod.Utils;
 using System;
@@ -123,6 +124,7 @@ namespace MegabonkTogether.Services
         public void OnTimerStarted();
         public void OnHatChanged(EHat eHat);
         public void OnSkinSelected(SkinData skin);
+        public void OnRespawn(uint ownerId, Vector3 position);
     }
     internal class SynchronizationService : ISynchronizationService
     {
@@ -148,7 +150,6 @@ namespace MegabonkTogether.Services
         private CancellationToken cancellationToken = default;
 
         private State currentState = State.None;
-
 
         public SynchronizationService(
             IPlayerManagerService playerManagerService,
@@ -224,6 +225,8 @@ namespace MegabonkTogether.Services
             EventManager.SubscribeStoppingChargingLampEvents(OnReceivedStoppingChargingLamp);
             EventManager.SubscribeTimerStartedEvents(OnReceivedTimerStarted);
             EventManager.SubscribeHatChangedEvents(OnReceivedHatChanged);
+            EventManager.SubscribeSpawnedReviverEvents(OnReceivedSpawnedReviver);
+            EventManager.SubscribePlayerRespawnedEvents(OnReceivedPlayerRespawned);
 
             cancellationToken = cancellationTokenSource.Token;
             this.udpClientService = udpClientService;
@@ -799,7 +802,8 @@ namespace MegabonkTogether.Services
                 Wave = waveNumber,
                 CanBeElite = enemy.IsElite(),
                 Hp = enemy.hp,
-                ExtraSizeMultiplier = extraSizeMultiplier
+                ExtraSizeMultiplier = extraSizeMultiplier,
+                ReviverId = Plugin.Instance.CurrentReviver
             };
 
             udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.ReliableUnordered);
@@ -829,6 +833,13 @@ namespace MegabonkTogether.Services
                 var clone = new Material(extraMaterial);
 
                 Il2CppFindHelper.RuntimeSetSharedMaterials(enemy.renderer, [original, clone]);
+            }
+
+            if (spawnedEnemy.ReviverId.HasValue)
+            {
+                var reviver = spawnedObjectManagerService.GetSpawnedObject(spawnedEnemy.ReviverId.Value).GetComponent<InteractableReviver>();
+                reviver?.SetSpawnedEnemy(enemy);
+                enemyManagerService.AddReviverEnemy_Name(enemy, reviver.GetFullName());
             }
 
             enemy.hp = spawnedEnemy.Hp;
@@ -2096,6 +2107,12 @@ namespace MegabonkTogether.Services
                     {
                         netplayId = tumbleWeed;
                     }
+
+                    var reviver = spawnedObjectManagerService.GetByReferenceInChildren<InteractableReviver>(instance.gameObject);
+                    if (reviver.HasValue)
+                    {
+                        netplayId = reviver;
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -2203,7 +2220,8 @@ namespace MegabonkTogether.Services
                 interactable.GetComponentInChildren<InteractableCrypt>() != null ||
                 interactable.GetComponentInChildren<InteractableGhostBossLeave>() != null ||
                 interactable.GetComponentInChildren<InteractableGift>() != null ||
-                interactable.GetComponentInChildren<InteractableGravestone>() != null
+                interactable.GetComponentInChildren<InteractableGravestone>() != null ||
+                interactable.GetComponentInChildren<InteractableReviver>() != null
             )
             {
                 return InteractableAction.Interact;
@@ -2425,6 +2443,13 @@ namespace MegabonkTogether.Services
                     if (interactableGravestone != null)
                     {
                         interactableGravestone.Interact();
+                        break;
+                    }
+
+                    var interactableReviver = interactableObj.GetComponentInChildren<InteractableReviver>();
+                    if (interactableReviver != null)
+                    {
+                        interactableReviver.Interact();
                         break;
                     }
 
@@ -2678,7 +2703,7 @@ namespace MegabonkTogether.Services
             }
 
 
-            var rand = UnityEngine.Random.Range(0, playerManagerService.GetAllPlayers().Count());
+            var rand = UnityEngine.Random.Range(0, playerManagerService.GetAllPlayersAlive().Count());
             var randomPlayer = playerManagerService.GetAllPlayersAlive().ElementAt(rand);
             DynamicData.For(enemy).Set("targetId", randomPlayer.ConnectionId); //Random target
 
@@ -3277,21 +3302,24 @@ namespace MegabonkTogether.Services
 
             localPlayer.Hp = 0;
             playerManagerService.UpdatePlayer(localPlayer);
+            GameManager.Instance.player.playerRenderer.gameObject.SetActive(false);
 
             var isHost = IsServerMode() ?? false;
             var playerId = localPlayer.ConnectionId;
 
+            IGameNetworkMessage diedMessage = new PlayerDied
+            {
+                PlayerId = localPlayer.ConnectionId
+            };
+
             if (!isHost)
             {
-                IGameNetworkMessage message = new PlayerDied
-                {
-                    PlayerId = localPlayer.ConnectionId
-                };
-
-                udpClientService.SendToHost(message);
+                udpClientService.SendToHost(diedMessage);
             }
             else
             {
+                udpClientService.SendToAllClients(diedMessage, LiteNetLib.DeliveryMethod.ReliableOrdered);
+
                 var allPlayersAliveIdWithout = playerManagerService.GetAllPlayersAlive().Where(p => p.ConnectionId != playerId).Select(p => p.ConnectionId).ToList();
                 var updated = enemyManagerService.ReTargetEnemies(playerId, allPlayersAliveIdWithout);
 
@@ -3301,6 +3329,8 @@ namespace MegabonkTogether.Services
                 };
 
                 udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
+
+                SpawnReviver(GameManager.Instance.player.transform.position, GameManager.Instance.player.playerRenderer.activeMaterials, localPlayer.ConnectionId);
             }
         }
 
@@ -3327,6 +3357,14 @@ namespace MegabonkTogether.Services
 
                 netPlayer.OnDied();
 
+                IGameNetworkMessage diedMessage = new PlayerDied
+                {
+                    PlayerId = died.PlayerId
+                };
+
+                udpClientService.SendToAllClients(diedMessage, LiteNetLib.DeliveryMethod.ReliableOrdered);
+
+
                 var allPlayersAliveIdWithout = playerManagerService.GetAllPlayersAlive().Where(p => p.ConnectionId != died.PlayerId).Select(p => p.ConnectionId).ToList();
                 var updated = enemyManagerService.ReTargetEnemies(died.PlayerId, allPlayersAliveIdWithout);
 
@@ -3336,6 +3374,75 @@ namespace MegabonkTogether.Services
                 };
 
                 udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
+
+                SpawnReviver(netPlayer.Model.transform.position, netPlayer.GetActiveMaterials(), diedPlayer.ConnectionId);
+            }
+            else
+            {
+                var diedNetPlayer = playerManagerService.GetNetPlayerByNetplayId(died.PlayerId);
+                if (diedNetPlayer == null)
+                {
+                    return;
+                }
+
+                diedNetPlayer.OnDied();
+            }
+        }
+
+        private void SpawnReviver(Vector3 position, Material[] materials, uint ownerConnectionId, uint reviverId = 0)
+        {
+            var desertGraves = EffectManager.Instance.desertGraves;
+            Plugin.CAN_SEND_MESSAGES = false;
+            var desertGraveInstance = GameObject.Instantiate(desertGraves[0], position, Quaternion.Euler(-90, 0, 0));
+            Plugin.CAN_SEND_MESSAGES = true;
+            var interactable = desertGraveInstance.GetComponent<InteractableDesertGrave>();
+            var chargeFx = GameObject.Instantiate(interactable.chargeFx, desertGraveInstance.transform);
+            var explodeFx = GameObject.Instantiate(interactable.explodeFx, desertGraveInstance.transform);
+
+            var isHost = IsServerMode() ?? false;
+            var netplayId = reviverId;
+
+            if (isHost)
+            {
+                netplayId = spawnedObjectManagerService.AddSpawnedObject(desertGraveInstance);
+
+                IGameNetworkMessage message = new SpawnedReviver
+                {
+                    Position = position.ToNumericsVector3(),
+                    OwnerConnectionId = ownerConnectionId,
+                    ReviverId = netplayId
+                };
+
+                udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
+            }
+            else
+            {
+                spawnedObjectManagerService.SetSpawnedObject(netplayId, desertGraveInstance);
+            }
+
+            var reviver = desertGraveInstance.AddComponent<InteractableReviver>();
+            reviver.Initialize(chargeFx, explodeFx, materials[0], netplayId, ownerConnectionId);
+
+
+            GameObject.Destroy(interactable);
+
+        }
+
+        private void OnReceivedSpawnedReviver(SpawnedReviver reviver)
+        {
+            var player = playerManagerService.GetNetPlayerByNetplayId(reviver.OwnerConnectionId);
+            if (player != null)
+            {
+                SpawnReviver(reviver.Position.ToUnityVector3(), player.GetActiveMaterials(), reviver.OwnerConnectionId, reviver.ReviverId);
+
+            }
+            else if (reviver.OwnerConnectionId == playerManagerService.GetLocalPlayer().ConnectionId)
+            {
+                SpawnReviver(reviver.Position.ToUnityVector3(), GameManager.Instance.player.playerRenderer.activeMaterials, reviver.OwnerConnectionId, reviver.ReviverId);
+            }
+            else
+            {
+                logger.LogWarning("Owner player not found in PlayerManagerService when processing OnReceivedSpawnedRviver.");
             }
         }
 
@@ -3888,6 +3995,59 @@ namespace MegabonkTogether.Services
 
             localPlayer.Skin = skinData.name;
             playerManagerService.UpdatePlayer(localPlayer);
+        }
+
+        public void OnRespawn(uint ownerId, Vector3 position)
+        {
+            var netplayer = playerManagerService.GetNetPlayerByNetplayId(ownerId);
+            if (netplayer != null)
+            {
+                netplayer.Respawn(position);
+                var player = playerManagerService.GetPlayer(ownerId);
+                player.Hp = player.MaxHp;
+                playerManagerService.UpdatePlayer(player);
+            }
+            else
+            {
+                GameManager.Instance.player.transform.position = position;
+                GameManager.Instance.player.inventory.playerHealth.hp = GameManager.Instance.player.inventory.playerHealth.maxHp;
+                var localPlayer = playerManagerService.GetLocalPlayer();
+                localPlayer.Hp = localPlayer.MaxHp;
+                playerManagerService.UpdatePlayer(localPlayer);
+                Plugin.Instance.CameraSwitcher.ResetToLocalPlayer();
+                GameManager.Instance.player.playerRenderer.gameObject.SetActive(true);
+            }
+
+            IGameNetworkMessage message = new PlayerRespawned
+            {
+                OwnerId = ownerId,
+                Position = Quantizer.Quantize(position)
+            };
+
+            udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
+        }
+
+
+        private void OnReceivedPlayerRespawned(PlayerRespawned respawned)
+        {
+            var netplayer = playerManagerService.GetNetPlayerByNetplayId(respawned.OwnerId);
+            if (netplayer != null)
+            {
+                netplayer.Respawn(Quantizer.Dequantize(respawned.Position));
+            }
+            else
+            {
+                GameManager.Instance.player.transform.position = Quantizer.Dequantize(respawned.Position);
+                GameManager.Instance.player.inventory.playerHealth.hp = GameManager.Instance.player.inventory.playerHealth.maxHp;
+
+                var localPlayer = playerManagerService.GetLocalPlayer();
+                localPlayer.Hp = localPlayer.MaxHp;
+                playerManagerService.UpdatePlayer(localPlayer);
+
+                Plugin.Instance.CameraSwitcher.ResetToLocalPlayer();
+
+                GameManager.Instance.player.playerRenderer.gameObject.SetActive(true);
+            }
         }
     }
 }

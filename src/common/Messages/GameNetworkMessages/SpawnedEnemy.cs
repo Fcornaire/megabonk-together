@@ -17,5 +17,6 @@ namespace MegabonkTogether.Common.Messages
         public uint TargetId { get; set; }
         public float Hp { get; set; }
         public float ExtraSizeMultiplier { get; set; }
+        public uint? ReviverId { get; set; }
     }
 }

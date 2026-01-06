@@ -108,7 +108,7 @@ namespace MegabonkTogether.Patches
             var isServer = synchronizationService.IsServerMode() ?? false;
             if (isServer)
             {
-                var allPlayers = playerManagerService.GetAllPlayers();
+                var allPlayers = playerManagerService.GetAllPlayersAlive();
                 var randomIndex = UnityEngine.Random.Range(0, allPlayers.Count());
                 var targetPlayer = allPlayers.ElementAt(randomIndex);
 
@@ -133,7 +133,7 @@ namespace MegabonkTogether.Patches
             var isServer = synchronizationService.IsServerMode() ?? false;
             if (isServer)
             {
-                var allPlayers = playerManagerService.GetAllPlayers();
+                var allPlayers = playerManagerService.GetAllPlayersAlive();
                 var randomIndex = UnityEngine.Random.Range(0, allPlayers.Count());
                 var targetPlayer = allPlayers.ElementAt(randomIndex);
 
@@ -158,7 +158,7 @@ namespace MegabonkTogether.Patches
             var isServer = synchronizationService.IsServerMode() ?? false;
             if (isServer)
             {
-                var allPlayers = playerManagerService.GetAllPlayers();
+                var allPlayers = playerManagerService.GetAllPlayersAlive();
                 var randomIndex = UnityEngine.Random.Range(0, allPlayers.Count());
                 var targetPlayer = allPlayers.ElementAt(randomIndex);
 

@@ -24,11 +24,16 @@ namespace MegabonkTogether.Services
         public void ResetForNextLevel();
         public void ApplyRetargetedEnemies(IEnumerable<(uint, uint)> enemy_NewTargetids, IEnumerable<(uint, Rigidbody)> playerId_rigidbody);
         public void InitializeSwitcher(TargetSwitcher switcher, EEnemyFlag enemyFlag, EEnemy enemyName);
+
+        public void AddReviverEnemy_Name(Enemy enemy, string netplayName);
+        public string GetReviverEnemy_Name(Enemy enemy);
+        public void RemoveReviverEnemy_Name(Enemy enemy);
     }
     internal class EnemyManagerService : IEnemyManagerService
     {
         private readonly ConcurrentDictionary<uint, Enemy> spawnedEnemies = [];
         private ConcurrentBag<EnemyModel> previousSpawnedEnemiesDelta = [];
+        private readonly ConcurrentDictionary<Enemy, string> reviverEnemies_NetplayNames = [];
         private uint currentEnemyId = 0; //TODO: concurrency?
 
         private const float POSITION_TRESHOLD = 0.1f;
@@ -226,5 +231,25 @@ namespace MegabonkTogether.Services
                     break;
             }
         }
+
+        public void AddReviverEnemy_Name(Enemy enemy, string netplayName)
+        {
+            reviverEnemies_NetplayNames.TryAdd(enemy, netplayName);
+        }
+
+        public string GetReviverEnemy_Name(Enemy enemy)
+        {
+            if (reviverEnemies_NetplayNames.TryGetValue(enemy, out var name))
+            {
+                return name;
+            }
+            return null;
+        }
+
+        public void RemoveReviverEnemy_Name(Enemy enemy)
+        {
+            reviverEnemies_NetplayNames.TryRemove(enemy, out _);
+        }
+
     }
 }

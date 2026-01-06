@@ -4,7 +4,7 @@
     <TargetFramework>net6.0</TargetFramework>
     <AssemblyName>MegabonkTogether</AssemblyName>
     <Product>MegabonkTogether</Product>
-    <Version>1.3.0</Version>
+    <Version>1.4.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>
@@ -32,15 +32,17 @@
 	<PackageReference Include="Profanity.Detector" Version="0.1.8" />
 	</ItemGroup>
 
-	<PropertyGroup>
-	  <!-- Use MegabonkPath if provided (local) -->
-	  <AssemblyPath Condition=" '$(MegabonkPath)' != '' ">$(MegabonkPath)/BepInEx/interop</AssemblyPath>
-	  <UnityLibPath Condition=" '$(MegabonkPath)' != '' ">$(MegabonkPath)/BepInEx/unity-libs</UnityLibPath>
-	  <PluginPath Condition=" '$(MegabonkPath)' != '' ">$(MegabonkPath)/BepInEx/plugins</PluginPath>
+	<!-- Use MegabonkPath if provided (local) -->
+	<PropertyGroup Condition="'$(MegabonkPath)' == ''">
+		<AssemblyPath>$(MSBuildProjectDirectory)\stripped-libs\interop</AssemblyPath>
+		<UnityLibPath>$(MSBuildProjectDirectory)\stripped-libs\unity-libs</UnityLibPath>
+	</PropertyGroup>
 
-	  <!-- Otherwise default to the stripper project's committed output (GitHub Actions) -->
-	  <AssemblyPath Condition=" '$(AssemblyPath)' == '' ">$(MSBuildProjectDirectory)/stripped-libs/interop</AssemblyPath>
-	  <UnityLibPath Condition=" '$(UnityLibPath)' == '' ">$(MSBuildProjectDirectory)/stripped-libs/unity-libs</UnityLibPath>
+	<!-- Otherwise default to the stripper project's committed output (GitHub Actions) -->
+	<PropertyGroup Condition="'$(MegabonkPath)' != ''">
+		<AssemblyPath>$(MegabonkPath)\BepInEx\interop</AssemblyPath>
+		<UnityLibPath>$(MegabonkPath)\BepInEx\unity-libs</UnityLibPath>
+		<PluginPath>$(MegabonkPath)\BepInEx\plugins</PluginPath>
 	</PropertyGroup>
 
 	<ItemGroup>

@@ -649,6 +649,15 @@ namespace MegabonkTogether.Services
                     case HatChanged hatChanged:
                         EventManager.OnHatChanged(hatChanged);
                         break;
+                    case SpawnedReviver spawnedReviver:
+                        EventManager.OnSpawnedReviver(spawnedReviver);
+                        break;
+                    case PlayerRespawned playerRespawned:
+                        EventManager.OnPlayerRespawned(playerRespawned);
+                        break;
+                    case PlayerDied playerDied:
+                        EventManager.OnPlayerDied(playerDied);
+                        break;
                     default:
                         Plugin.Log.LogWarning($"Unknown message type received. message={message}");
                         break;
@@ -717,11 +726,11 @@ namespace MegabonkTogether.Services
                         playerToUpdate.MovementState = playerUpdate.MovementState;
                         playerToUpdate.AnimatorState = playerUpdate.AnimatorState;
                         playerToUpdate.ConnectionId = playerUpdate.ConnectionId;
-                        if (playerToUpdate.Hp != 0)
-                        {
-                            playerToUpdate.Hp = playerUpdate.Hp;
-                            playerToUpdate.Shield = playerUpdate.Shield;
-                        }
+                        //if (playerToUpdate.Hp != 0)
+                        //{
+                        playerToUpdate.Hp = playerUpdate.Hp;
+                        playerToUpdate.Shield = playerUpdate.Shield;
+                        //}
                         playerToUpdate.MaxHp = playerUpdate.MaxHp;
                         playerToUpdate.MaxShield = playerUpdate.MaxShield;
                         //playerToUpdate.Xp = playerUpdate.Xp;
@@ -929,11 +938,11 @@ namespace MegabonkTogether.Services
                 var existingPlayer = playerManagerService.GetPlayer(player.ConnectionId);
                 if (existingPlayer != null)
                 {
-                    var previousHp = existingPlayer.Hp;
-                    if (previousHp == 0)
-                    {
-                        player.Hp = 0;
-                    }
+                    //var previousHp = existingPlayer.Hp;
+                    //if (previousHp == 0)
+                    //{
+                    //    player.Hp = 0;
+                    //}
                     playerManagerService.UpdatePlayer(player);
 
                     var playerUpdate = new PlayerUpdate
@@ -951,10 +960,10 @@ namespace MegabonkTogether.Services
                         Inventory = player.Inventory,
                     };
 
-                    if (previousHp == 0)
-                    {
-                        playerUpdate.Hp = 0;
-                    }
+                    //if (previousHp == 0)
+                    //{
+                    //    playerUpdate.Hp = 0;
+                    //}
 
                     EventManager.OnPlayerUpdate(playerUpdate);
                 }

@@ -206,7 +206,7 @@ namespace MegabonkTogether.Patches.Unity
                 return;
             }
 
-            if (EffectManager.Instance.desertGraves.Contains(original))
+            if (EffectManager.Instance.desertGraves.Contains(original) && Plugin.CAN_SEND_MESSAGES)
             {
                 var resultAsGameObject = IL2CPP.PointerToValueGeneric<GameObject>(result.Pointer, false, false);
                 synchronizationService.OnSpawnedObject(resultAsGameObject);

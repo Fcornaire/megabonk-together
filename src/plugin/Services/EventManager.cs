@@ -62,6 +62,8 @@ namespace MegabonkTogether.Services
         private static event Action<StoppingChargingLamp> StoppingChargingLampEvents;
         private static event Action<TimerStarted> TimerStartedEvents;
         private static event Action<HatChanged> HatChangedEvents;
+        private static event Action<SpawnedReviver> SpawnedReviverEvents;
+        private static event Action<PlayerRespawned> PlayerRespawnedEvents;
 
         public static void OnSpawnedObject(SpawnedObject spawnedObject)
         {
@@ -740,6 +742,32 @@ namespace MegabonkTogether.Services
             MainThreadDispatcher.Enqueue(() =>
             {
                 HatChangedEvents?.Invoke(hatChanged);
+            });
+        }
+
+        public static void SubscribeSpawnedReviverEvents(Action<SpawnedReviver> action)
+        {
+            SpawnedReviverEvents += action;
+        }
+
+        public static void OnSpawnedReviver(SpawnedReviver spawnedReviver)
+        {
+            MainThreadDispatcher.Enqueue(() =>
+            {
+                SpawnedReviverEvents?.Invoke(spawnedReviver);
+            });
+        }
+
+        public static void SubscribePlayerRespawnedEvents(Action<PlayerRespawned> action)
+        {
+            PlayerRespawnedEvents += action;
+        }
+
+        internal static void OnPlayerRespawned(PlayerRespawned playerRespawned)
+        {
+            MainThreadDispatcher.Enqueue(() =>
+            {
+                PlayerRespawnedEvents?.Invoke(playerRespawned);
             });
         }
     }
