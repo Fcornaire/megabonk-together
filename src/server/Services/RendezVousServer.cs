@@ -171,43 +171,40 @@ namespace MegabonkTogether.Server.Services
             {
                 try
                 {
-                    var ipEndPoint = IPEndPoint.Parse($"{peer.Address}:{peer.Port}");
-                    var isHostRelay = sessions.Values.Any(session => session.Host.EndPoint.Equals(ipEndPoint));
-                    var isClientRelay = sessions.Values.Any(session => session.Clients.Values.Any(relayInfo => relayInfo.EndPoint.Equals(ipEndPoint)));
+                    var ipEndPoint = new IPEndPoint(peer.Address, peer.Port);
+                    logger.LogInformation($"Peer connected for relay lookup: {ipEndPoint}");
 
-                    if (isHostRelay || isClientRelay)
+                    var clientRelayPeer = sessions.Values
+                        .SelectMany(session => session.Clients.Values)
+                        .FirstOrDefault(relayInfo => relayInfo.EndPoint.Equals(ipEndPoint) && relayInfo.NetPeer == null);
+
+                    if (clientRelayPeer != null)
                     {
-                        logger.LogInformation($"Peer connected for relay mode: {peer.Address}");
-                        if (isHostRelay)
-                        {
-                            logger.LogInformation($"  -> Identified as HOST relay");
-                            var hostRelayPeer = sessions.Values.First(session => session.Host.EndPoint.Equals(ipEndPoint)).Host;
-                            hostRelayPeer.NetPeer = peer;
-
-                            peerLookup[peer] = hostRelayPeer;
-
-                            var session = hostRelayPeer.Session;
-                            while (session.PendingToHost.TryDequeue(out var pending))
-                            {
-                                logger.LogInformation($"  -> Sending pending message to HOST relay queued at {pending.EnqueuedAt} !!!");
-                                peer.Send(pending.Payload, pending.DeliveryMethod);
-                            }
-                        }
-                        else
-                        {
-                            logger.LogInformation($"  -> Identified as CLIENT relay");
-                            var clientRelayPeer = sessions.Values
-                                .SelectMany(session => session.Clients.Values)
-                                .First(relayInfo => relayInfo.EndPoint.Equals(ipEndPoint));
-                            clientRelayPeer.NetPeer = peer;
-
-                            peerLookup[peer] = clientRelayPeer;
-                        }
+                        logger.LogInformation($"  -> Identified as CLIENT relay for connection {clientRelayPeer.ConnectionId}");
+                        clientRelayPeer.NetPeer = peer;
+                        peerLookup[peer] = clientRelayPeer;
+                        return;
                     }
-                    else
+
+                    var hostSession = sessions.Values
+                        .FirstOrDefault(session => session.Host.EndPoint.Equals(ipEndPoint) && session.Host.NetPeer == null);
+
+                    if (hostSession != null)
                     {
-                        logger.LogWarning($"Unexpected peer connected: {peer.Address}");
+                        logger.LogInformation($"  -> Identified as HOST relay for connection {hostSession.Host.ConnectionId}");
+                        var hostRelayPeer = hostSession.Host;
+                        hostRelayPeer.NetPeer = peer;
+                        peerLookup[peer] = hostRelayPeer;
+
+                        while (hostSession.PendingToHost.TryDequeue(out var pending))
+                        {
+                            logger.LogInformation($"  -> Sending pending message to HOST relay queued at {pending.EnqueuedAt} !!!");
+                            peer.Send(pending.Payload, pending.DeliveryMethod);
+                        }
+                        return;
                     }
+
+                    logger.LogWarning($"Unexpected peer connected: {ipEndPoint} - no matching relay session found");
                 }
                 catch (Exception ex)
                 {

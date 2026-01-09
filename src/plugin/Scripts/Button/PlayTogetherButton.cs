@@ -1,11 +1,10 @@
-﻿using UnityEngine;
-using UnityEngine.EventSystems;
+﻿using Assets.Scripts.Managers;
+using UnityEngine;
 
 namespace MegabonkTogether.Scripts.Button
 {
     public class PlayTogetherButton : MyButtonNormal
     {
-        private bool WasSelected = false;
         private MainMenu mainMenu;
 
         public override void OnClick()
@@ -13,26 +12,14 @@ namespace MegabonkTogether.Scripts.Button
             OnPlayTogetherClick();
         }
 
-        public override void OnSelect(BaseEventData eventData)
-        {
-            WasSelected = true;
-        }
 
         private void OnPlayTogetherClick()
         {
+            ButtonManager.selectedButton2 = this;
+
             var networkMenuObj = new GameObject("NetworkMenuTab");
             Plugin.Instance.NetworkTab = networkMenuObj.AddComponent<NetworkMenuTab>();
             Plugin.Instance.NetworkTab.SetMainMenu(mainMenu);
-        }
-
-        public bool HasBeenSelected()
-        {
-            return WasSelected;
-        }
-
-        public void ResetSelected()
-        {
-            WasSelected = false;
         }
 
         public void SetMainMenu(MainMenu menu)

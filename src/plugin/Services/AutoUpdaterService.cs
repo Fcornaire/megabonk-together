@@ -50,6 +50,7 @@ namespace MegabonkTogether.Common
     public class AutoUpdaterService : IAutoUpdaterService
     {
         private const string UPDATE_FILE_PREFIX = ".update_download_";
+        private static readonly TimeSpan UPDATE_CHECK_COOLDOWN = TimeSpan.FromMinutes(5);
 
         private const string GITHUB_OWNER = "Fcornaire";
         private const string GITHUB_REPO = "megabonk-together";
@@ -60,6 +61,7 @@ namespace MegabonkTogether.Common
         private bool isUpdateAvailable = false;
         private string downloadedVersion = "";
         private string latestVersion = "";
+        private DateTime lastUpdateCheck = DateTime.MinValue;
 
 #if THUNDERSTORE
         private bool isThunderstoreBuild = true;
@@ -127,7 +129,16 @@ namespace MegabonkTogether.Common
                 return true;
             }
 
+            var timeSinceLastCheck = DateTime.UtcNow - lastUpdateCheck;
+            if (timeSinceLastCheck < UPDATE_CHECK_COOLDOWN)
+            {
+                var remainingTime = UPDATE_CHECK_COOLDOWN - timeSinceLastCheck;
+                logger.LogInfo($"Next update check in {remainingTime.TotalMinutes:F1} minutes.");
+                return false;
+            }
+
             latestVersion = "";
+            lastUpdateCheck = DateTime.UtcNow;
 
             try
             {

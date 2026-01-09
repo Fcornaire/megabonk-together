@@ -16,6 +16,7 @@ namespace MegabonkTogether.Common.Messages
         public uint ConnectionId { get; set; }
         public bool? IsHost { get; set; }
         public uint HostConnectionId { get; set; }
+        public string Name { get; set; }
     }
 
 }

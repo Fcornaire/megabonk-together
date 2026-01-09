@@ -15,7 +15,7 @@ namespace MegabonkTogether.Scripts.Modal
         protected bool isAnimating = false;
         private string nextMessage = "";
 
-        protected virtual Vector2 PanelSize => new Vector2(600, 450);
+        protected virtual Vector2 PanelSize => new Vector2(700, 550);
         protected virtual Vector2 LoaderSize => new Vector2(80, 80);
         protected virtual Vector2 StatusTextSize => new Vector2(500, 70);
         protected virtual float StatusTextFontSize => 36f;

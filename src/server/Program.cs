@@ -1,4 +1,5 @@
-﻿using MegabonkTogether.Server;
+﻿using MegabonkTogether.Common.Models;
+using MegabonkTogether.Server;
 using MegabonkTogether.Server.Services;
 using Microsoft.AspNetCore.HttpOverrides;
 using OpenTelemetry.Metrics;
@@ -33,6 +34,12 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Clear(); //You absolute want to remove these two lines if you are modifying this for you and not using a proxy
 });
 
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(5);
+    options.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(5);
+});
+
 var app = builder.Build();
 
 app.UseForwardedHeaders();
@@ -53,15 +60,37 @@ app.MapWhen(context => context.Request.Path.StartsWithSegments("/ws"), wsApp =>
 
         if (context.WebSockets.IsWebSocketRequest)
         {
+            using var cts = new CancellationTokenSource();
             var webSocket = await context.WebSockets.AcceptWebSocketAsync();
 
-            var queueId = context.Request.QueryString.ToString().Replace("?", "");
+            var query = context.Request.Query;
 
-            await handler.HandleClientAsync(webSocket,
-                context.Connection.RemoteIpAddress?.ToString(),
-                context.Connection.RemotePort,
-                queueId,
-                context.RequestAborted);
+            if (query.ContainsKey("random"))
+            {
+                await handler.HandleRandomClientAsync(webSocket,
+                    context.Connection.RemoteIpAddress?.ToString(),
+                    context.Connection.RemotePort,
+                    cts.Token);
+            }
+            else if (query.ContainsKey("friendlies"))
+            {
+                var role = Enum.Parse<Role>(query["role"].ToString());
+                var code = query["code"].ToString();
+                var name = query["name"].ToString();
+
+                await handler.HandleFriendliesClientAsync(webSocket,
+                    context.Connection.RemoteIpAddress?.ToString(),
+                    context.Connection.RemotePort,
+                    role,
+                    code,
+                    name,
+                    cts.Token);
+            }
+            else
+            {
+                logger.LogWarning("Unknown connection mode");
+                context.Response.StatusCode = 400;
+            }
         }
         else
         {

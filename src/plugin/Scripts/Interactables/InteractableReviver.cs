@@ -162,7 +162,6 @@ namespace MegabonkTogether.Scripts.Interactables
                     Il2CppFindHelper.RuntimeSetSharedMaterials(r, mats);
 
                     enemy.enemyData.material = customMaterial;
-                    enemy.hp = 30;
                 }
             }
 

@@ -74,6 +74,12 @@ namespace MegabonkTogether.Scripts.Modal
                 UnityEngine.Object.DestroyImmediate(originalButton);
             }
 
+            UnityEngine.UI.Button button = buttonObj.GetComponentInChildren<UnityEngine.UI.Button>();
+            if (button != null)
+            {
+                button.onClick = new();
+            }
+
             updateButton = buttonObj.AddComponent<CustomButton>();
             updateButton.SetOnClickAction(OnUpdateClicked);
 

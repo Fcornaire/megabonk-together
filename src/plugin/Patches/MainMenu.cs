@@ -16,7 +16,6 @@ namespace MegabonkTogether.Patches
         /// <summary>
         /// Add "TOGETHER!" button to main menu
         /// </summary>
-        /// <param name="__instance"></param>
         [HarmonyPostfix]
         [HarmonyPatch(nameof(MainMenu.Start))]
         public static void Start_Postfix(MainMenu __instance)
@@ -29,6 +28,12 @@ namespace MegabonkTogether.Patches
             if (originalButton != null)
             {
                 UnityEngine.Object.DestroyImmediate(originalButton);
+            }
+
+            UnityEngine.UI.Button button = go.GetComponentInChildren<UnityEngine.UI.Button>();
+            if (button != null)
+            {
+                button.onClick = new();
             }
 
             var customButton = go.AddComponent<PlayTogetherButton>();
@@ -60,23 +65,6 @@ namespace MegabonkTogether.Patches
             {
                 customButton.gameObject.SetActive(false);
             }
-        }
-
-        /// <summary>
-        /// Prevent going to character selection if "TOGETHER!" button was clicked until matchmaking is done
-        /// </summary>
-        /// <returns></returns>
-        [HarmonyPrefix]
-        [HarmonyPatch(nameof(MainMenu.GoToCharacterSelection))]
-        public static bool GoToCharacterSelection_Prefix()
-        {
-            if (Plugin.Instance.PlayTogetherButton != null && Plugin.Instance.PlayTogetherButton.HasBeenSelected())
-            {
-                Plugin.Log.LogInfo("Play Together button was clicked, prevent original");
-                return false;
-            }
-
-            return true;
         }
 
         /// <summary>

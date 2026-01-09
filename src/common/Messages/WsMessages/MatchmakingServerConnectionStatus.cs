@@ -8,5 +8,7 @@ namespace MegabonkTogether.Common.Messages
     {
         public bool HasJoined { get; set; }
         public uint ConnectionId { get; set; }
+        public string RoomCode { get; set; }
+        public string Message { get; set; }
     }
 }

@@ -5,6 +5,7 @@ using LiteNetLib;
 using LiteNetLib.Utils;
 using MegabonkTogether.Common.Messages;
 using MegabonkTogether.Common.Messages.GameNetworkMessages;
+using MegabonkTogether.Common.Models;
 using MegabonkTogether.Extensions;
 using MegabonkTogether.Helpers;
 using MemoryPack;
@@ -12,6 +13,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MegabonkTogether.Services
@@ -60,7 +62,14 @@ namespace MegabonkTogether.Services
 
         public int GetNetPeerCount();
         public bool AreAllPeersReady();
+        public int GetCurrentReadyPeersCount();
         public int GetLatency(uint connectionId);
+        public void UpdateMode(bool isHost);
+        public bool IsHandlingConnection();
+        public void CancelAnyNatIntroduction();
+        public bool HasHandledHost();
+        public void ResetHandledHost();
+        public void RemovePeer(uint clientConnectionId);
     }
     internal class UdpClientService : IUdpClientService
     {
@@ -79,6 +88,8 @@ namespace MegabonkTogether.Services
         private int expectedPeerCount = 0;
         private bool hasStarted = false;
         private bool hasAllPeersConnected = false;
+        private bool isHandlingConnection = false;
+        private bool hasHandledHost = false;
         private bool isGameOver = false;
         private readonly IPlayerManagerService playerManagerService;
         private readonly IEnemyManagerService enemyManagerService;
@@ -97,6 +108,8 @@ namespace MegabonkTogether.Services
         private bool hasTriedForceRelay = false;
 
         private const int POLL_INTERVAL_MS = 5;
+
+        private CancellationTokenSource pollingCancelationTokenSource;
 
         public UdpClientService(
             IPlayerManagerService playerManagerService,
@@ -236,7 +249,9 @@ namespace MegabonkTogether.Services
                     {
                         ConnectionId = selfConnectionId.Value,
                         Name = Configuration.ModConfig.PlayerName.Value,
-                        IsHost = isHost.HasValue && isHost.Value
+                        IsHost =
+                            Plugin.Instance.Mode.Mode == NetworkModeType.Random && isHost.HasValue && isHost.Value
+                            || Plugin.Instance.Mode.Mode == NetworkModeType.Friendlies && Plugin.Instance.Mode.Role == Role.Host
                     };
 
                     SendToHost(introduced);
@@ -259,7 +274,7 @@ namespace MegabonkTogether.Services
 
             listener.PeerDisconnectedEvent += (peer, info) =>
             {
-                Plugin.Log.LogInfo($"Peer disconnected: {info.Reason}");
+                logger.LogInfo($"Peer disconnected: {info.Reason}");
 
                 if (peer == null)
                 {
@@ -363,7 +378,7 @@ namespace MegabonkTogether.Services
             }
 
 
-            if (!gamePeers.Remove(peer.Id, out _))
+            if (!gamePeers.TryRemove(peer.Id, out _))
             {
                 Plugin.Log.LogWarning($"Disconnected peer {peer.Id} not found in gamePeers");
                 return;
@@ -375,8 +390,6 @@ namespace MegabonkTogether.Services
                 return;
             }
 
-
-            gamePeers.Remove(peer.Id, out _); // Remove from connected peers
 
             if (usesRelay.Any())
             {
@@ -408,7 +421,7 @@ namespace MegabonkTogether.Services
             }
             else
             {
-                if (gamePeers.IsEmpty)
+                if (gamePeers.IsEmpty && (Plugin.Instance.Mode.Mode == NetworkModeType.Random || Plugin.Instance.Mode.Mode == NetworkModeType.Friendlies && GameManager.Instance?.player != null))
                 {
                     Plugin.Log.LogInfo($"All players disconnected, returning to main menu. : is host : {isHost.Value}");
 
@@ -457,6 +470,25 @@ namespace MegabonkTogether.Services
             return areAllRelayReady && areGamePeersReady;
         }
 
+        public int GetCurrentReadyPeersCount()
+        {
+            if (!isHost.HasValue || !isHost.Value)
+            {
+                return 0;
+            }
+
+            int readyCount = 0;
+
+            if (usesRelay.Any())
+            {
+                readyCount += gamePeersIntroducedByRelay.Values.Count(p => p.HasSelected);
+            }
+
+            readyCount += gamePeersIntroduced.Values.Count(p => p.HasSelected);
+
+            return readyCount;
+        }
+
         private void HandleMessage(IGameNetworkMessage message, int netPeerId)
         {
             if (!isHost.Value)
@@ -471,6 +503,13 @@ namespace MegabonkTogether.Services
                                 Plugin.Log.LogWarning($"Duplicate introduction from relay for host={netPeerId}, ignoring.");
                             }
 
+                            var playerByRelay = playerManagerService.GetPlayer(introduced.ConnectionId);
+                            if (playerByRelay != null)
+                            {
+                                playerByRelay.Name = introduced.Name;
+                                playerManagerService.UpdatePlayer(playerByRelay);
+                            }
+
                             return;
                         }
 
@@ -478,6 +517,13 @@ namespace MegabonkTogether.Services
                         {
                             Plugin.Log.LogWarning($"Duplicate introduction from host={netPeerId}, ignoring.");
                             return;
+                        }
+
+                        var player = playerManagerService.GetPlayer(introduced.ConnectionId);
+                        if (player != null)
+                        {
+                            player.Name = introduced.Name;
+                            playerManagerService.UpdatePlayer(player);
                         }
 
                         break;
@@ -675,6 +721,11 @@ namespace MegabonkTogether.Services
                                 Plugin.Log.LogWarning($"Duplicate introduction from netPlayerId={netPeerId} via relay, ignoring.");
                             }
 
+                            if (Plugin.Instance.Mode.Mode == Common.Models.NetworkModeType.Friendlies)
+                            {
+                                Plugin.StartNotification(("MegabonkTogether", "FriendliesClientJoinSuccess"), ("MegabonkTogether", "FriendliesClientJoinSuccessDesc"), [introduced.Name]);
+                            }
+
                             return;
                         }
                         else
@@ -686,16 +737,29 @@ namespace MegabonkTogether.Services
                             }
                         }
 
+                        if (Plugin.Instance.Mode.Mode == Common.Models.NetworkModeType.Friendlies)
+                        {
+                            Plugin.StartNotification(("MegabonkTogether", "FriendliesClientJoinSuccess"), ("MegabonkTogether", "FriendliesClientJoinSuccessDesc"), [introduced.Name]);
+                        }
+
                         IGameNetworkMessage introducedResponse = new Introduced
                         {
                             ConnectionId = selfConnectionId.Value,
-                            Name = Configuration.ModConfig.PlayerName.Value
+                            Name = Configuration.ModConfig.PlayerName.Value,
+                            IsHost = isHost.Value
                         };
 
                         var peer = gamePeers.FirstOrDefault(p => p.Value.Id == netPeerId).Value;
                         if (peer != null)
                         {
                             SendToClient(peer, introducedResponse, introduced.ConnectionId);
+
+                            var playerModel = playerManagerService.GetPlayer(introduced.ConnectionId);
+                            if (playerModel != null)
+                            {
+                                playerModel.Name = introduced.Name;
+                                playerManagerService.UpdatePlayer(playerModel);
+                            }
                         }
 
                         break;
@@ -905,6 +969,7 @@ namespace MegabonkTogether.Services
 
         public void Reset()
         {
+            hasHandledHost = false;
             selfConnectionId = null;
             isHost = null;
             expectedPeerCount = 0;
@@ -923,6 +988,8 @@ namespace MegabonkTogether.Services
                 relayPeer = null;
             }
             usesRelay.Clear();
+
+            netManager.DisconnectAll();
         }
 
         public void GameOver()
@@ -975,15 +1042,27 @@ namespace MegabonkTogether.Services
 
         public async Task<bool> HandleMatch(MatchInfo matchInfo, uint selfConnectionId, string rdvServerHost, uint rdvServerPort)
         {
-            this.rdvServerHost = rdvServerHost;
-            this.rdvServerPort = (int)rdvServerPort;
+            if (hasHandledHost)
+            {
+                Plugin.Log.LogWarning("Already handled first connection,skipping");
+                return false;
+            }
 
-            this.selfConnectionId = selfConnectionId;
-            isHost = matchInfo.Peers.FirstOrDefault(p => p.ConnectionId == selfConnectionId)?.IsHost ?? false;
+            if (!this.selfConnectionId.HasValue) this.selfConnectionId = selfConnectionId;
+            if (!this.isHost.HasValue) this.isHost = matchInfo.Peers.FirstOrDefault(p => p.ConnectionId == selfConnectionId)?.IsHost ?? false;
 
+            if (!this.isHost.Value)
+            {
+                hasHandledHost = true; //Prevent further host connection
+            }
+
+            var allPlayers = playerManagerService.GetAllPlayers();
             foreach (var peer in matchInfo.Peers)
             {
-                playerManagerService.AddPlayer(peer.ConnectionId, peer.IsHost.Value, peer.ConnectionId == selfConnectionId);
+                if (!allPlayers.Any(p => p.ConnectionId == peer.ConnectionId))
+                {
+                    playerManagerService.AddPlayer(peer.ConnectionId, peer.IsHost.Value, peer.ConnectionId == selfConnectionId);
+                }
             }
 
             playerManagerService.SetSeed((int)matchInfo.Seed);
@@ -1008,81 +1087,126 @@ namespace MegabonkTogether.Services
 
             Plugin.Log.LogInfo($"Sending NAT punch request to rendezvous server with token {uniqueToken}");
 
+            this.rdvServerHost = rdvServerHost;
+            this.rdvServerPort = (int)rdvServerPort;
+
             netManager.NatPunchModule.SendNatIntroduceRequest(rdvServerHost, (int)rdvServerPort, uniqueToken);
 
             Plugin.Log.LogInfo("Waiting for NAT introductions and P2P connections...");
 
             natPunchComplete = new TaskCompletionSource<bool>();
 
+            pollingCancelationTokenSource = new CancellationTokenSource();
+            var token = pollingCancelationTokenSource.Token;
+
             var pollTask = Task.Run(async () =>
             {
-                while (true)
+                while (!token.IsCancellationRequested)
                 {
                     bool relayConnected;
                     lock (relayPeerLock)
                     {
                         relayConnected = relayPeer != null;
                     }
-                    if (gamePeers.Count + usesRelay.Count >= expectedPeerCount && (!usesRelay.Any() || relayConnected))
-                        break;
+                    if (expectedPeerCount > 0 && gamePeers.Count + usesRelay.Count >= expectedPeerCount && (!usesRelay.Any() || relayConnected)) break;
                     Poll();
                     await Task.Delay(POLL_INTERVAL_MS);
                 }
-                hasAllPeersConnected = true;
-                natPunchComplete.SetResult(true);
 
+                if (token.IsCancellationRequested)
+                {
+                    hasAllPeersConnected = false;
+                    natPunchComplete.SetResult(false);
+                    return;
+                }
+
+                hasAllPeersConnected = expectedPeerCount > 0 && gamePeers.Count + usesRelay.Count >= expectedPeerCount && (!usesRelay.Any() || relayPeer != null);
+                natPunchComplete.SetResult(hasAllPeersConnected);
             });
 
-            var timeoutTask = Task.Delay(15000);
+            isHandlingConnection = true;
+
+            var timeoutTask = Task.Delay(10000);
             var completedTask = await Task.WhenAny(natPunchComplete.Task, timeoutTask);
+
+            if (token.IsCancellationRequested)
+            {
+                logger.LogWarning("P2P connection handling was cancelled.");
+                isHandlingConnection = false;
+                return false;
+            }
 
             if (completedTask == natPunchComplete.Task && await natPunchComplete.Task)
             {
-                Plugin.Log.LogInfo($"P2P connections successful! Connected to {gamePeers.Count + usesRelay.Count} peers");
+                logger.LogInfo($"P2P connections successful! Connected to {gamePeers.Count + usesRelay.Count} peers");
+                isHandlingConnection = false;
                 return true;
             }
             else
             {
-                if (!hasTriedForceRelay)
+                if (!hasTriedForceRelay && expectedPeerCount > 0)
                 {
-                    Plugin.Log.LogWarning($"P2P connection timeout - only {gamePeers.Count + usesRelay.Count}/{expectedPeerCount} peers connected, retrying with forced relay mode...");
+                    if (token.IsCancellationRequested)
+                    {
+                        logger.LogWarning("P2P connection handling was cancelled, no relay attempt");
+                        return false;
+                    }
+
+                    logger.LogWarning($"P2P connection timeout - only {gamePeers.Count + usesRelay.Count}/{expectedPeerCount} peers connected, retrying with forced relay mode...");
                     hasTriedForceRelay = true;
 
                     var forceRelayToken = $"{role}|{hostId}|{selfConnectionId}|force_relay";
-                    Plugin.Log.LogInfo($"Sending NAT punch request with force relay: {forceRelayToken}");
+                    logger.LogInfo($"Sending NAT punch request with force relay: {forceRelayToken}");
                     netManager.NatPunchModule.SendNatIntroduceRequest(rdvServerHost, (int)rdvServerPort, forceRelayToken);
 
                     natPunchComplete = new TaskCompletionSource<bool>();
 
                     var retryPollTask = Task.Run(async () =>
                     {
-                        while (true)
+                        while (!token.IsCancellationRequested)
                         {
                             bool relayConnected;
                             lock (relayPeerLock)
                             {
                                 relayConnected = relayPeer != null;
                             }
-                            if (gamePeers.Count + usesRelay.Count >= expectedPeerCount && (!usesRelay.Any() || relayConnected))
+                            if (expectedPeerCount > 0 && gamePeers.Count + usesRelay.Count >= expectedPeerCount && (!usesRelay.Any() || relayConnected))
                                 break;
                             Poll();
                             await Task.Delay(POLL_INTERVAL_MS);
                         }
-                        hasAllPeersConnected = true;
-                        natPunchComplete.SetResult(true);
+
+                        if (token.IsCancellationRequested)
+                        {
+                            hasAllPeersConnected = false;
+                            natPunchComplete.SetResult(false);
+                            return;
+                        }
+
+                        hasAllPeersConnected = expectedPeerCount > 0 && gamePeers.Count + usesRelay.Count >= expectedPeerCount && (!usesRelay.Any() || relayPeer != null);
+                        natPunchComplete.SetResult(hasAllPeersConnected);
                     });
 
-                    var retryTimeoutTask = Task.Delay(15000);
+                    var retryTimeoutTask = Task.Delay(10000);
                     var retryCompletedTask = await Task.WhenAny(natPunchComplete.Task, retryTimeoutTask);
+
+                    if (token.IsCancellationRequested)
+                    {
+                        logger.LogWarning("P2P connection handling was cancelled during force relay retry.");
+                        isHandlingConnection = false;
+                        return false;
+                    }
 
                     if (retryCompletedTask == natPunchComplete.Task && await natPunchComplete.Task)
                     {
-                        Plugin.Log.LogInfo($"P2P connections successful with forced relay! Connected to {gamePeers.Count + usesRelay.Count} peers");
+                        logger.LogInfo($"P2P connections successful with forced relay! Connected to {gamePeers.Count + usesRelay.Count} peers");
+                        isHandlingConnection = false;
                         return true;
                     }
                 }
 
-                Plugin.Log.LogError($"P2P connection timeout - only {gamePeers.Count + usesRelay.Count}/{expectedPeerCount} peers connected");
+                logger.LogError($"P2P connection timeout - only {gamePeers.Count + usesRelay.Count}/{expectedPeerCount} peers connected");
+                isHandlingConnection = false;
                 return gamePeers.Count + usesRelay.Count > 0;
             }
         }
@@ -1502,11 +1626,29 @@ namespace MegabonkTogether.Services
 
             if (usesRelay.Any())
             {
-                var toExcept = gamePeersIntroducedByRelay[sender].ConnectionId;
+                bool found = false;
+                uint toExcept = 0;
+                if (gamePeersIntroducedByRelay.ContainsKey(sender))
+                {
+                    toExcept = gamePeersIntroducedByRelay[sender].ConnectionId;
+                    found = true;
+                }
+
+                if (toExcept == 0)
+                {
+                    var normalPeer = gamePeersIntroducedByRelay.FirstOrDefault(p => p.Value.ConnectionId == sender).Value;
+
+                    if (normalPeer != null)
+                    {
+                        toExcept = normalPeer.ConnectionId;
+                        found = true;
+                    }
+                }
+
 
                 RelayEnvelope relayEnvelope = new()
                 {
-                    ToFilters = [toExcept],
+                    ToFilters = found ? [toExcept] : [],
                     Payload = msgBytes,
                 };
 
@@ -1573,6 +1715,45 @@ namespace MegabonkTogether.Services
             {
                 Plugin.Log.LogError($"Failed to send message: {ex.Message}");
             }
+        }
+
+        public void UpdateMode(bool isHost)
+        {
+            this.isHost = isHost;
+        }
+
+        public bool IsHandlingConnection()
+        {
+            return isHandlingConnection;
+        }
+
+        public void CancelAnyNatIntroduction()
+        {
+            pollingCancelationTokenSource?.Cancel();
+        }
+
+        public bool HasHandledHost()
+        {
+            return hasHandledHost;
+        }
+
+        public void RemovePeer(uint clientConnectionId)
+        {
+            var peerIntro = gamePeersIntroduced.FirstOrDefault(p => p.Value.ConnectionId == clientConnectionId);
+            if (peerIntro.Value != null)
+            {
+                gamePeersIntroduced.Remove(peerIntro.Key, out _);
+            }
+            var peerIntroByRelay = gamePeersIntroducedByRelay.FirstOrDefault(p => p.Value.ConnectionId == clientConnectionId);
+            if (peerIntroByRelay.Value != null)
+            {
+                gamePeersIntroducedByRelay.Remove(peerIntroByRelay.Key, out _);
+            }
+        }
+
+        public void ResetHandledHost()
+        {
+            hasHandledHost = false;
         }
     }
 }

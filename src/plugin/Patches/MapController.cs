@@ -1,10 +1,14 @@
 ﻿using Assets.Scripts.Game.Other;
 using Assets.Scripts.Managers;
 using HarmonyLib;
+using MegabonkTogether.Common.Models;
 using MegabonkTogether.Extensions;
+using MegabonkTogether.Helpers;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
+using System.Collections;
 using System.Linq;
+using UnityEngine;
 
 namespace MegabonkTogether.Patches
 {
@@ -16,8 +20,11 @@ namespace MegabonkTogether.Patches
         private static readonly IWebsocketClientService websocketClientService = Plugin.Services.GetService<IWebsocketClientService>();
         private static readonly IPlayerManagerService playerManagerService = Plugin.Services.GetService<IPlayerManagerService>();
 
+        private static bool isWaitingForServerResponse = false;
+
         /// <summary>
         /// Prevent Host from starting a new map until all players are ready (selected character)
+        /// In friendlies, also notify server that game is starting to prevent new players from joining
         /// </summary>
         [HarmonyPrefix]
         [HarmonyPatch(nameof(MapController.StartNewMap))]
@@ -49,12 +56,47 @@ namespace MegabonkTogether.Patches
                 return false;
             }
 
+            var isFriendlyMode = Plugin.Instance.Mode.Mode == NetworkModeType.Friendlies;
+
+            if (isFriendlyMode && !isWaitingForServerResponse)
+            {
+                isWaitingForServerResponse = true;
+                CoroutineRunner.Instance.Run(NotifyServerAndStartGame(newRunConfig));
+                return false;
+            }
+
             Plugin.Instance.IS_HOST_READY = false;
             Plugin.Instance.HideModal();
 
             return true;
         }
 
+        private static IEnumerator NotifyServerAndStartGame(RunConfig runConfig)
+        {
+            Plugin.Instance.ShowModal("Locking lobby...");
+
+            var task = websocketClientService.SendGameStarting();
+
+            while (!task.IsCompleted)
+            {
+                yield return new WaitForSeconds(0.17f);
+            }
+
+            if (task.Result)
+            {
+                Plugin.Instance.IS_HOST_READY = false;
+                Plugin.Instance.HideModal();
+
+                MapController.StartNewMap(runConfig);
+                isWaitingForServerResponse = false;
+            }
+            else
+            {
+                Plugin.Log.LogError("Failed to get server response for game starting");
+                Plugin.Instance.HideModal();
+                Plugin.Instance.ShowModal("Failed to lock lobby. Please try again.");
+            }
+        }
 
         /// <summary>
         /// Synchronize run start to clients if all players are ready

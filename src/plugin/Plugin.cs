@@ -10,6 +10,7 @@ using BepInEx.Unity.IL2CPP;
 using Il2CppInterop.Runtime;
 using Il2CppInterop.Runtime.Injection;
 using MegabonkTogether.Common;
+using MegabonkTogether.Common.Models;
 using MegabonkTogether.Configuration;
 using MegabonkTogether.Helpers;
 using MegabonkTogether.Scripts;
@@ -44,10 +45,11 @@ namespace MegabonkTogether
         public CameraSwitcher CameraSwitcher = null;
         public PlayTogetherButton PlayTogetherButton = null;
         public AchievementPopup AchievementPopup = null;
-        public MainMenu MainMenu = null;
+        private MainMenu MainMenu = null;
         private MapEventsManager mapEventsManager = null;
         private MapEventsDesert mapEventsDesert = null;
         private LoadingModal modal;
+        public NetworkMode Mode = new();
 
         public static IHost Host = null!;
         public static IServiceProvider Services => Host.Services;
@@ -284,7 +286,11 @@ namespace MegabonkTogether
             PlayerHealth.A_Died = originalDiedAction;
             originalDiedAction = null;
 
-            if (invokeDeathEvent) PlayerHealth.A_Died.Invoke();
+            if (invokeDeathEvent)
+            {
+                GameManager.Instance.player.playerRenderer.gameObject.SetActive(true);
+                PlayerHealth.A_Died.Invoke();
+            }
         }
 
         public AchievementPopup GetAchievementPopup()

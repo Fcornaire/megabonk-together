@@ -3993,6 +3993,8 @@ namespace MegabonkTogether.Services
         {
             var localPlayer = playerManagerService.GetLocalPlayer();
 
+            if (localPlayer == null) return;
+
             localPlayer.Skin = skinData.name;
             playerManagerService.UpdatePlayer(localPlayer);
         }

@@ -24,6 +24,12 @@ namespace MegabonkTogether.Services
             { ("MegabonkTogether", "HostDisconnected_Description"), "Host left!" },
             { ("MegabonkTogether", "ClientDisconnected"), "Disconnected" },
             { ("MegabonkTogether", "ClientDisconnected_Description"), "Client disconnected" },
+            { ("MegabonkTogether", "FriendliesHostSuccess"), "Friendlies" },
+            { ("MegabonkTogether", "FriendliesHostSuccessDesc"), "Hosting a friendly lobby" },
+            { ("MegabonkTogether", "FriendliesClientSuccess"), "Friendlies" },
+            { ("MegabonkTogether", "FriendliesClientSuccessDesc"), "Joined {0} lobby" },
+            { ("MegabonkTogether", "FriendliesClientJoinSuccess"), "Friendlies" },
+            { ("MegabonkTogether", "FriendliesClientJoinSuccessDesc"), "{0} joined " }
         };
 
         private readonly Queue<IEnumerable<string>> NextLocalizedDescription = new();

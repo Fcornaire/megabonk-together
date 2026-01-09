@@ -28,9 +28,9 @@ namespace MegabonkTogether.Scripts
         private const float tumbleWeedUpdatetickInterval = 1f / TUMBLEWEED_UPDATE_TICK_RATE;
         private float tumbleWeedUpdateAccumulator = 0f;
 
-
         private bool hasStarted = false;
         private bool? hasFoundMatch = null;
+        private bool? hasJoinedFriendlyRoom = null;
         private bool? isConnectedToMatchMaker = null;
         private bool IsNetworkInterrupted = false;
         private string matchMakerFailureMessage = string.Empty;
@@ -46,6 +46,8 @@ namespace MegabonkTogether.Scripts
         public bool? IsConnectedToMatchMaker => isConnectedToMatchMaker;
         public string MatchMakerFailureMessage => matchMakerFailureMessage;
         public bool? HasFoundMatch => hasFoundMatch;
+
+        public bool? HasJoinedFriendlyRoom => hasJoinedFriendlyRoom;
         public bool IsNetworkInterruptedStatus => IsNetworkInterrupted;
 
         public bool IsHost => isHost;
@@ -74,6 +76,8 @@ namespace MegabonkTogether.Scripts
             try
             {
                 if (udpClientService == null || synchronizationService == null) return;
+
+                if (hasFoundMatch == null) return;
 
                 if (!hasFoundMatch.HasValue && !hasFoundMatch.Value || synchronizationService.IsLoadingNextLevel()) return;
 
@@ -144,23 +148,10 @@ namespace MegabonkTogether.Scripts
                     {
                         IL2CPP.il2cpp_thread_attach(IL2CPP.il2cpp_domain_get());
 
-                        bool success = await websocketClientService.ConnectAndMatchAsync(ModConfig.ServerUrl.Value, ModConfig.RDVServerPort.Value, this);
-
-                        if (success)
-                        {
-                            Plugin.Log.LogInfo("P2P connection established!");
-                            hasFoundMatch = true;
-                            udpClientService = Plugin.Services.GetRequiredService<IUdpClientService>();
-                            synchronizationService = Plugin.Services.GetRequiredService<ISynchronizationService>();
-
-                            isHost = synchronizationService.IsServerMode() ?? false;
-                        }
-                        else
-                        {
-                            hasFoundMatch = false;
-                            matchMakerFailureMessage = "Failed to establish P2P connection.";
-                            IsNetworkInterrupted = true;
-                        }
+                        hasFoundMatch = null;
+                        IsNetworkInterrupted = false;
+                        matchMakerFailureMessage = string.Empty;
+                        await websocketClientService.ConnectAndMatchAsync(ModConfig.ServerUrl.Value, ModConfig.RDVServerPort.Value, this);
                     }
                     catch (System.Exception ex)
                     {
@@ -180,9 +171,9 @@ namespace MegabonkTogether.Scripts
 
         public void ResetNetworking()
         {
-            websocketClientService.Reset().Wait();
-            hasFoundMatch = null;
+            Plugin.Instance.Mode = new();
             isHost = false;
+
             try
             {
                 udpClientService?.Reset();
@@ -211,8 +202,6 @@ namespace MegabonkTogether.Scripts
 
             playerManagerService?.Reset();
             isConnectedToMatchMaker = null;
-            IsNetworkInterrupted = false;
-            matchMakerFailureMessage = string.Empty;
 
             if (websocketClientService != null)
             {
@@ -245,6 +234,33 @@ namespace MegabonkTogether.Scripts
         {
             IsNetworkInterrupted = true;
             matchMakerFailureMessage = message;
+        }
+
+        public void OnMatchFound(bool success)
+        {
+            hasFoundMatch = success;
+            if (success)
+            {
+                udpClientService = Plugin.Services.GetRequiredService<IUdpClientService>();
+                synchronizationService = Plugin.Services.GetRequiredService<ISynchronizationService>();
+                if (Plugin.Instance.Mode.Mode == Common.Models.NetworkModeType.Random)
+                {
+                    isHost = synchronizationService.IsServerMode() ?? false;
+                }
+                else
+                {
+                    isHost = Plugin.Instance.Mode.Role == Common.Models.Role.Host;
+                    udpClientService.UpdateMode(isHost);
+                }
+            }
+            else
+            {
+                if (Plugin.Instance.Mode.Mode == Common.Models.NetworkModeType.Random)
+                {
+                    matchMakerFailureMessage = "Failed to establish P2P connection.";
+                }
+                IsNetworkInterrupted = true;
+            }
         }
 
     }

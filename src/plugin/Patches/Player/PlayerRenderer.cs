@@ -26,6 +26,11 @@ namespace MegabonkTogether.Patches.Player
                 return;
             }
 
+            if (hatData == null)
+            {
+                return;
+            }
+
             synchronizationService.OnHatChanged(hatData.eHat);
         }
     }

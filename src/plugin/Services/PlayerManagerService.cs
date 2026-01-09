@@ -24,7 +24,7 @@ namespace MegabonkTogether.Services
         public IEnumerable<Player> GetAllPlayersAlive();
         public IEnumerable<Player> GetAllPlayersExceptLocal();
         public IEnumerable<NetPlayer> GetAllSpawnedNetPlayers();
-        public bool AddPlayer(uint connectionId, bool isHost, bool isSelf);
+        public bool AddPlayer(uint connectionId, bool isHost, bool isSelf, string name = "Player");
         public Player GetPlayer(uint connectionId);
         public void UpdatePlayer(Player player);
 
@@ -65,6 +65,7 @@ namespace MegabonkTogether.Services
         public bool IsRemotePlayerHealth(PlayerHealth instance);
         public bool IsANetPlayerAbility(PassiveAbilityBullseye instance);
         public bool IsRemoteItem(ItemGhost instance);
+        public void RemovePlayer(uint clientConnectionId);
     }
 
     public class PlayerManagerService : IPlayerManagerService
@@ -171,18 +172,17 @@ namespace MegabonkTogether.Services
         {
             return hasSelectedCharacter;
         }
-        public bool AddPlayer(uint connectionId, bool isHost, bool isSelf)
+        public bool AddPlayer(uint connectionId, bool isHost, bool isSelf, string name = "Player")
         {
             var player = new Player
             {
                 ConnectionId = connectionId,
                 IsHost = isHost,
-                Name = isSelf ? Configuration.ModConfig.PlayerName.Value : "Player"
+                Name = isSelf ? Configuration.ModConfig.PlayerName.Value : name
             };
+
             if (!players.TryAdd(connectionId, player))
             {
-                logger.LogWarning("Attempted to add a player that already exists.");
-
                 return false;
             }
 
@@ -197,11 +197,16 @@ namespace MegabonkTogether.Services
             return true;
         }
 
-        private void RemovePlayer(uint connectionId)
+        public void RemovePlayer(uint connectionId)
         {
             if (!players.Remove(connectionId, out var removed))
             {
                 logger.LogWarning("Attempted to remove a player that does not exist.");
+                return;
+            }
+
+            if (GameManager.Instance?.player == null)
+            {
                 return;
             }
 
