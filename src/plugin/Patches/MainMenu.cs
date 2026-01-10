@@ -1,8 +1,11 @@
 ﻿using HarmonyLib;
 using MegabonkTogether.Common;
+using MegabonkTogether.Configuration;
 using MegabonkTogether.Scripts.Button;
+using MegabonkTogether.Scripts.Modal;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
+using System.Threading.Tasks;
 
 namespace MegabonkTogether.Patches
 {
@@ -12,6 +15,9 @@ namespace MegabonkTogether.Patches
         private static readonly ISynchronizationService synchronizationService = Plugin.Services.GetRequiredService<ISynchronizationService>();
         private static readonly IPlayerManagerService playerManagerService = Plugin.Services.GetRequiredService<IPlayerManagerService>();
         private static readonly IAutoUpdaterService autoUpdaterService = Plugin.Services.GetRequiredService<IAutoUpdaterService>();
+        private static readonly IChangelogService changelogService = Plugin.Services.GetRequiredService<IChangelogService>();
+
+        private static bool hasCheckedChangelog = false;
 
         /// <summary>
         /// Add "TOGETHER!" button to main menu
@@ -65,6 +71,65 @@ namespace MegabonkTogether.Patches
             {
                 customButton.gameObject.SetActive(false);
             }
+
+            if (!hasCheckedChangelog)
+            {
+                hasCheckedChangelog = true;
+
+                if (string.IsNullOrEmpty(ModConfig.PreviousVersion.Value) && !autoUpdaterService.IsThunderstoreBuild())
+                {
+                    Plugin.Log.LogInfo("First time with changelog system detected");
+                    ModConfig.ShowChangelog.Value = true;
+                    ModConfig.PreviousVersion.Value = "1.0.0";
+                    ModConfig.Save();
+                }
+
+                bool shouldShow = changelogService.ShouldShowChangelog();
+
+                if (shouldShow)
+                {
+                    ShowChangelogModal();
+                }
+            }
+        }
+
+        private static void ShowChangelogModal()
+        {
+            Task.Run(async () =>
+            {
+                try
+                {
+                    var previousVersion = Configuration.ModConfig.PreviousVersion.Value;
+                    var currentVersion = MyPluginInfo.PLUGIN_VERSION;
+
+                    Plugin.Log.LogInfo($"Fetching changelog for versions: {previousVersion} -> {currentVersion}");
+
+                    var changelog = await changelogService.LoadChangelogAsync();
+                    if (changelog == null || changelog.Count == 0)
+                    {
+                        Plugin.Log.LogInfo("No changelog data available");
+                        changelogService.MarkChangelogAsShown();
+                        return;
+                    }
+
+                    var changes = changelogService.GetChangesBetweenVersions(changelog, previousVersion, currentVersion);
+                    if (changes == null || changes.Count == 0)
+                    {
+                        Plugin.Log.LogInfo("No changes found between versions");
+                        changelogService.MarkChangelogAsShown();
+                        return;
+                    }
+
+                    Plugin.Log.LogInfo($"Found {changes.Count} version(s) with changes to display");
+
+                    ChangelogModal.Show(changes);
+                }
+                catch (System.Exception ex)
+                {
+                    Plugin.Log.LogError($"Error showing changelog: {ex.Message}");
+                    changelogService.MarkChangelogAsShown();
+                }
+            });
         }
 
         /// <summary>

@@ -1,4 +1,5 @@
 ﻿using BepInEx.Logging;
+using MegabonkTogether.Services;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -45,6 +46,8 @@ namespace MegabonkTogether.Common
         public void LaunchUpdaterOnExit(string pluginDirectory);
         public string GetLatestVersion();
         public bool IsThunderstoreBuild();
+        public string GetCurrentVersion();
+        public Task EnsureChangelogExists(string version, string pluginDirectory);
     }
 
     public class AutoUpdaterService : IAutoUpdaterService
@@ -120,6 +123,11 @@ namespace MegabonkTogether.Common
             }
 
             return latestVersion;
+        }
+
+        public string GetCurrentVersion()
+        {
+            return currentVersion;
         }
 
         public async Task<bool> CheckAndUpdate()
@@ -255,6 +263,55 @@ namespace MegabonkTogether.Common
             }
         }
 
+        public async Task EnsureChangelogExists(string version, string pluginDirectory)
+        {
+            var changelogPath = Path.Combine(pluginDirectory, ChangelogService.CHANGELOG_FILENAME);
+
+            if (File.Exists(changelogPath))
+            {
+                logger.LogInfo("CHANGELOG.toml already exists, skipping download");
+                return;
+            }
+
+            try
+            {
+                logger.LogInfo($"CHANGELOG.toml not found locally, fetching from GitHub for version {version}...");
+
+                var url = $"https://raw.githubusercontent.com/{GITHUB_OWNER}/{GITHUB_REPO}/{version}/src/plugin/CHANGELOG.toml";
+
+                using var request = new HttpRequestMessage(HttpMethod.Get, url);
+                using var response = await httpClient.SendAsync(request);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    logger.LogWarning($"Could not fetch CHANGELOG.toml from {version} tag, trying main branch...");
+
+                    url = $"https://raw.githubusercontent.com/{GITHUB_OWNER}/{GITHUB_REPO}/main/src/plugin/CHANGELOG.toml";
+                    using var fallbackRequest = new HttpRequestMessage(HttpMethod.Get, url);
+                    using var fallbackResponse = await httpClient.SendAsync(fallbackRequest);
+
+                    if (!fallbackResponse.IsSuccessStatusCode)
+                    {
+                        logger.LogWarning("Could not fetch CHANGELOG.toml from main branch either");
+                        return;
+                    }
+
+                    var content = await fallbackResponse.Content.ReadAsStringAsync();
+                    await File.WriteAllTextAsync(changelogPath, content);
+                    logger.LogInfo("CHANGELOG.toml fetched successfully from main branch");
+                    return;
+                }
+
+                var versionContent = await response.Content.ReadAsStringAsync();
+                await File.WriteAllTextAsync(changelogPath, versionContent);
+                logger.LogInfo("CHANGELOG.toml fetched successfully from version tag");
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning($"Failed to fetch CHANGELOG.toml: {ex.Message}");
+            }
+        }
+
         /// <summary>
         /// I think mod site are flagging the bat, so we will generate it on the fly and they can leave me alone
         /// </summary>
@@ -348,7 +405,7 @@ namespace MegabonkTogether.Common
                 batchContent.AppendLine("if !ERRORLEVEL! EQU 0 (");
                 batchContent.AppendLine("    echo Extracting ZIP archive...");
                 batchContent.AppendLine("    ");
-                batchContent.AppendLine("    powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"$zipPath = '%UPDATE_FILE%'; $destPath = '%PLUGIN_DIR%'; Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip = [System.IO.Compression.ZipFile]::OpenRead($zipPath); try { foreach ($entry in $zip.Entries) { if ($entry.Name -match '\\.dll$' -or $entry.Name -match '\\.exe$') { $targetPath = Join-Path $destPath $entry.Name; [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $targetPath, $true); Write-Host ('  Extracted: ' + $entry.Name) } } } finally { $zip.Dispose() }\"");
+                batchContent.AppendLine("    powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"$zipPath = '%UPDATE_FILE%'; $destPath = '%PLUGIN_DIR%'; Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip = [System.IO.Compression.ZipFile]::OpenRead($zipPath); try { foreach ($entry in $zip.Entries) { if ($entry.Name) { $targetPath = Join-Path $destPath $entry.Name; [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $targetPath, $true); Write-Host ('  Extracted: ' + $entry.Name) } } } finally { $zip.Dispose() }\"");
                 batchContent.AppendLine("    ");
                 batchContent.AppendLine("    if !ERRORLEVEL! NEQ 0 (");
                 batchContent.AppendLine("        echo ERROR: Failed to extract ZIP");
@@ -467,6 +524,11 @@ namespace MegabonkTogether.Common
                     logger.LogError($"Updater script not found at: {updaterPath}");
                     return;
                 }
+
+                Configuration.ModConfig.PreviousVersion.Value = currentVersion;
+                Configuration.ModConfig.ShowChangelog.Value = true;
+                Configuration.ModConfig.Save();
+                logger.LogInfo($"Changelog will be shown on next launch");
 
                 var currentProcess = Process.GetCurrentProcess();
                 var gameProcessId = currentProcess.Id;

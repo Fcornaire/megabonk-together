@@ -21,6 +21,7 @@ Megabonk together is a WIP mod that bring netplay to megabonk.
 This mod feature:
 
 - Peer to peer online up to 6 players (Relay transport for ipv6 addresses or when ipv4 direct connection failed)
+- Random and private queue
 - Mostly (not all) in game mechanics synchronized
   - Weapons (also their updgrade)
   - Projectiles (not perfect for all)
@@ -36,6 +37,36 @@ This mod feature:
 - Probably won't work with other non cosmetic mods
 
 More info at [Notable Network Changes](./NETPLAY_CHANGES.md)
+
+## Changelog
+
+<details>
+<summary>📋 Click to view full changelog</summary>
+
+### v2.0.0
+
+- 🎉 **Added changelog system**: See what's new after each update!
+- 🎮 **Implemented Friendlies**: A private queue system. One host share a code and other join with it.
+- ⚰️ **Added a new interactable, Reviver**: When a player die, it will now spawn a Coffin. Other player have to defeat his ghost to respawn the dead player
+
+### v1.3.0
+
+- 🛒 **Thunderstore support**: No auto update for thunderstore as they have to update throught the website or r2modman
+- ⚖️ **Balance change**: Reduced Credits earning to limit a bit spawned enemies
+
+### v1.2.0
+
+- 📊 **Add latency indicator to the host**: The host see latency for all clients
+
+### v1.1.0
+
+- 🔄 **Generate updater on the fly**
+
+### v1.0.0
+
+- 🚀 **Initial release !** Thanks for trying the mod
+
+</details>
 
 # Install
 
@@ -75,6 +106,16 @@ Start by downloading the BepInex loader [BepInEx-Unity.IL2CPP-win-x64-6.0.0-be.7
 > Will try to fix later
 
 - Enjoy ! Do not hesitate to open an [issue](https://github.com/Fcornaire/megabonk-together/issues) if you encounter a bug or something isn't working
+
+# How to play
+
+## Random
+
+Play on a random queue, the next 6 players within a time period will get matched together (no pun intended)
+
+## Freindlies
+
+Private queue, Host as to share the room code (copy from the uper right button) and paste it to the players he want to play with
 
 # Known issue
 

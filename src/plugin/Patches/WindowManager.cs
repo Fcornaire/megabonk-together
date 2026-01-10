@@ -106,7 +106,7 @@ namespace MegabonkTogether.Patches
         [HarmonyPatch(nameof(WindowManager.WindowClosed))]
         public static void WindowClosed_Postfix(Window closedWindow)
         {
-            if (closedWindow.name == "W_Character")
+            if (closedWindow.name == "W_Character" && Plugin.Instance.Mode.Mode == NetworkModeType.Friendlies)
             {
                 var character = closedWindow as CharacterMenu;
                 character.b_confirm.state = MyButton.EButtonState.Active;

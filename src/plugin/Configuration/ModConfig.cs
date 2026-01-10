@@ -12,6 +12,8 @@ namespace MegabonkTogether.Configuration
         public static ConfigEntry<bool> CheckForUpdates { get; private set; }
         public static ConfigEntry<string> ServerUrl { get; private set; }
         public static ConfigEntry<uint> RDVServerPort { get; private set; }
+        public static ConfigEntry<bool> ShowChangelog { get; private set; }
+        public static ConfigEntry<string> PreviousVersion { get; private set; }
 
         public static void Initialize(ConfigFile config)
         {
@@ -40,6 +42,18 @@ namespace MegabonkTogether.Configuration
                 "RDVServerPort",
                 (uint)5678,
                 "The port of the relay server. Do not change this unless you know what you're doing"
+            );
+            ShowChangelog = config.Bind(
+                "Updates",
+                "ShowChangelog",
+                false,
+                "Internal flag to show changelog after an update. Do not modify manually."
+            );
+            PreviousVersion = config.Bind(
+                "Updates",
+                "PreviousVersion",
+                "",
+                "Internal flag to store the previous version before an update. Do not modify manually."
             );
         }
 
