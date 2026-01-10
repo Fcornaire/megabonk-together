@@ -17,6 +17,8 @@ namespace MegabonkTogether.Server.Services
         private int connectedClientsCount = 0;
         private readonly ConcurrentDictionary<string, DateTime> dailyUniqueConnections = new(); //No logs !
         private int dailyTotalConnections = 0;
+        private int allTimeTotalConnections = 0;
+        private int peakUniqueConnections = 0;
         private readonly ConcurrentDictionary<string, int> dailyRunsByMapAndStage = new();
         private readonly ConcurrentDictionary<string, int> dailyCharacterUsage = new();
         private DateTime lastResetDate = DateTime.UtcNow.Date;
@@ -43,6 +45,16 @@ namespace MegabonkTogether.Server.Services
                 description: "Total number of connections today (including reconnections)");
 
             meter.CreateObservableGauge(
+                "megabonk.alltime_total_connections",
+                () => allTimeTotalConnections,
+                description: "Total number of connections all time (including reconnections)");
+
+            meter.CreateObservableGauge(
+                "megabonk.peak_unique_connections",
+                () => peakUniqueConnections,
+                description: "Peak number of unique clients connected in a single day");
+
+            meter.CreateObservableGauge(
                 "megabonk.daily_runs_by_map_stage",
                 () => GetDailyRunsByMapAndStage(),
                 description: "Number of runs started today grouped by map and stage");
@@ -61,6 +73,7 @@ namespace MegabonkTogether.Server.Services
 
             Interlocked.Increment(ref connectedClientsCount);
             Interlocked.Increment(ref dailyTotalConnections);
+            Interlocked.Increment(ref allTimeTotalConnections);
 
             if (!string.IsNullOrEmpty(ipAddress))
             {
@@ -143,6 +156,12 @@ namespace MegabonkTogether.Server.Services
                 {
                     if (lastResetDate < today)
                     {
+                        var currentUniqueCount = dailyUniqueConnections.Count;
+                        if (currentUniqueCount > peakUniqueConnections)
+                        {
+                            peakUniqueConnections = currentUniqueCount;
+                        }
+
                         dailyUniqueConnections.Clear();
                         dailyTotalConnections = 0;
                         dailyRunsByMapAndStage.Clear();
