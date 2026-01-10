@@ -91,19 +91,24 @@ jobs:
           PREV_TAG=$(git for-each-ref --sort=-creatordate --format '%(refname:short)' refs/tags | sed -n '2p' || true)
 
           if [ -z "$PREV_TAG" ]; then
-            echo "No previous tag found, generating full changelog up to ${VERSION}"
-            RANGE=$(git rev-list --max-parents=0 HEAD)
-            CHANGES=$(git log --pretty=format:'- %s (%h)' ${RANGE}..refs/tags/${VERSION} || true)
-            BODY="Initial release\n\n${CHANGES}"
+            CHANGES=$(git log --pretty=format:'- %s (%h)')
+            {
+              echo "RELEASE_NOTES<<EOF"
+              echo "Initial release"
+              echo
+              echo "$CHANGES"
+              echo "EOF"
+            } >> "$GITHUB_ENV"
           else
-            echo "Previous tag: $PREV_TAG"
-            CHANGES=$(git log --pretty=format:'- %s (%h)' ${PREV_TAG}..refs/tags/${VERSION} || true)
-            BODY="Changes since ${PREV_TAG}:\n\n${CHANGES}"
+            CHANGES=$(git log --pretty=format:'- %s (%h)' "${PREV_TAG}..HEAD")
+            {
+              echo "RELEASE_NOTES<<EOF"
+              echo "Changes since ${PREV_TAG}:"
+              echo
+              echo "$CHANGES"
+              echo "EOF"
+            } >> "$GITHUB_ENV"
           fi
-
-          echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
-          echo "$BODY" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
         env:
           VERSION: ${{ env.VERSION }}
 
