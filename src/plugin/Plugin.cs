@@ -115,6 +115,7 @@ namespace MegabonkTogether
             ClassInjector.RegisterTypeInIl2Cpp<NetworkMenuTab>();
             ClassInjector.RegisterTypeInIl2Cpp<LoadingModal>();
             ClassInjector.RegisterTypeInIl2Cpp<UpdateAvailableModal>();
+            ClassInjector.RegisterTypeInIl2Cpp<ChangelogModal>();
             ClassInjector.RegisterTypeInIl2Cpp<TargetSwitcher>();
             ClassInjector.RegisterTypeInIl2Cpp<InteractableReviver>();
             ClassInjector.RegisterTypeInIl2Cpp<NotificationQueueManager>();
@@ -141,6 +142,7 @@ namespace MegabonkTogether
                 services.AddSingleton<ILocalizationService, LocalizationService>();
                 services.AddSingleton<IGameBalanceService, GameBalanceService>();
                 services.AddSingleton<IAutoUpdaterService, AutoUpdaterService>();
+                services.AddSingleton<IChangelogService, ChangelogService>();
             });
 
             Host = builder.Build();
