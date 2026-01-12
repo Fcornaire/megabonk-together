@@ -10,6 +10,7 @@
 [version."2.0.1"]
 changes = [
     "Fixed (i hope) button selection reset issue in character window",
+    "Fixed projectile not despawning in singleplayer mode",
     "Fixed some connection issues in relay mode for some users"
 ]
 

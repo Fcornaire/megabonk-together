@@ -19,6 +19,11 @@ namespace MegabonkTogether.Patches.Projectiles
         [HarmonyPatch(nameof(ProjectileBase.TryInit))]
         public static void TryInit_Prefix(ProjectileBase __instance)
         {
+            if (!synchronizationService.HasNetplaySessionStarted())
+            {
+                return;
+            }
+
             var weapon = __instance.weaponBase;
             var netPlayer = playerManagerService.GetNetPlayerByWeapon(weapon);
 
@@ -86,15 +91,13 @@ namespace MegabonkTogether.Patches.Projectiles
         /// <summary>
         /// Synchronize projectile destruction server-side only
         /// </summary>
-        /// <param name="__instance"></param>
-        /// <returns></returns>
         [HarmonyPrefix]
         [HarmonyPatch(nameof(ProjectileBase.ProjectileDone))]
         public static bool ProjectileDone_Postfix(ProjectileBase __instance)
         {
             if (!synchronizationService.HasNetplaySessionStarted())
             {
-                return false;
+                return true;
             }
 
             var isServer = synchronizationService.IsServerMode() ?? false;

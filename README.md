@@ -46,6 +46,7 @@ More info at [Notable Network Changes](./NETPLAY_CHANGES.md)
 ### v2.0.1
 
 - 🎮 **Fixed button selection reset issue** in character window
+- 🎯 **Fixed projectile not despawning** in singleplayer mode
 - 🔗 **Fixed some connection issues** in relay mode for some users
 
 ### v2.0.0
