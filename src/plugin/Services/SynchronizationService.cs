@@ -659,7 +659,7 @@ namespace MegabonkTogether.Services
                     Plugin.Instance.ClearPrefabs();
                     Plugin.Instance.RestoreDeath(false);
                     CoroutineRunner.Instance.Stop(LevelUpScreenPatches.CurrentRoutine);
-                    CoroutineRunner.Instance.Stop(EncounterUiPatches.CurrentRoutine);
+                    //CoroutineRunner.Instance.Stop(EncounterUiPatches.CurrentRoutine);
                     CoroutineRunner.Instance.Stop(ChestWindowUiPatches.CurrentRoutine);
 
                     EventManager.OnPortalOpened();

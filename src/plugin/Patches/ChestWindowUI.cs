@@ -136,7 +136,7 @@ namespace MegabonkTogether.Patches
             infoText.fontSize = 36;
             infoText.color = Color.white;
 
-            float timer = 1f;
+            float timer = 0.3f;
             while (timer > 0f)
             {
                 int seconds = Mathf.FloorToInt(timer);

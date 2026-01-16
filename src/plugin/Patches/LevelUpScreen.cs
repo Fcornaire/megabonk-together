@@ -70,7 +70,7 @@ namespace MegabonkTogether.Patches
         }
 
         /// <summary>
-        /// Add again 1 second of invulnerability after closing the level up screen (unless interacting with shady guy)
+        /// Add again 0.3 second of invulnerability after closing the level up screen (unless interacting with shady guy)
         /// </summary>
         [HarmonyPostfix]
         [HarmonyPatch(nameof(LevelupScreen.OnClose))]
@@ -78,12 +78,6 @@ namespace MegabonkTogether.Patches
         {
             if (!synchronizationService.HasNetplaySessionStarted())
             {
-                return;
-            }
-
-            if (CurrentRoutine == null)
-            {
-                Plugin.Log.LogInfo("No active invulnerability routine, skipping.");
                 return;
             }
 
@@ -100,6 +94,12 @@ namespace MegabonkTogether.Patches
                 infoText.text = "";
                 infoText.color = Color.white;
                 InteractableShadyGuy.currentlyInteracting = null;
+                return;
+            }
+
+            if (CurrentRoutine == null)
+            {
+                Plugin.Log.LogInfo("No active invulnerability routine, skipping.");
                 return;
             }
 
@@ -129,7 +129,7 @@ namespace MegabonkTogether.Patches
             infoText.fontSize = 36;
             infoText.color = Color.white;
 
-            float timer = 1f;
+            float timer = 0.3f;
             while (timer > 0f)
             {
                 int seconds = Mathf.FloorToInt(timer);

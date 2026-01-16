@@ -1,4 +1,5 @@
 ﻿using Assets.Scripts.UI.InGame.Levelup;
+using Assets.Scripts.UI.InGame.Rewards;
 using Assets.Scripts.Utility;
 using HarmonyLib;
 using MegabonkTogether.Services;
@@ -34,6 +35,25 @@ namespace MegabonkTogether.Patches
         }
 
         /// <summary>
+        /// Prevent adding an encounter if one is already in progress
+        /// This should not only prevent missing some reward but hopefully also random crashes happening with encounter
+        /// The encounter will be queued and popped later at LateUpdate
+        /// </summary>
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(EncounterWindows.AddEncounter))]
+        public static bool AddEncounter_Prefix(EncounterWindows __instance, EEncounter rewardWindowType)
+        {
+            if (__instance.encounterInProgress)
+            {
+                //Plugin.Log.LogWarning($"Encounter in progress, queueing encounter {rewardWindowType}");
+                __instance.rewardQueue.Enqueue(rewardWindowType);
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
         /// Prevent pause on netplay reward pop (Shady guy and other)
         /// </summary>
         [HarmonyPostfix]
@@ -62,6 +82,11 @@ namespace MegabonkTogether.Patches
             }
 
             if (!GameManager.Instance.player.playerInput.CanInput())
+            {
+                return;
+            }
+
+            if (GameManager.Instance.player.IsDead())
             {
                 return;
             }
