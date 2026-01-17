@@ -211,11 +211,20 @@ namespace MegabonkTogether.Server.Services
                     var session = relayPeer.Session;
                     var data = reader.GetRemainingBytes();
 
-                    var envelope = MemoryPackSerializer.Deserialize<RelayEnvelope>(data);
+                    RelayEnvelope envelope;
+                    try
+                    {
+                        envelope = MemoryPackSerializer.Deserialize<RelayEnvelope>(data);
+                    }
+                    catch (MemoryPackSerializationException)
+                    {
+                        logger.LogDebug($"Corrupted packet from {peer.Address}, discarding");
+                        return;
+                    }
+
                     if (envelope == null)
                     {
-                        logger.LogWarning($"Failed to deserialize RelayEnvelope from host {peer.Address}");
-
+                        logger.LogDebug($"Failed to deserialize RelayEnvelope from {peer.Address}");
                         return;
                     }
 
@@ -224,7 +233,7 @@ namespace MegabonkTogether.Server.Services
                         var netPeer = session.Host.NetPeer;
                         if (netPeer == null)
                         {
-                            logger.LogWarning($"Host NetPeer is null for session of client {peer.Address}, enqueuing for latter");
+                            logger.LogWarning($"Host NetPeer is null for session of client {peer.Address}, enqueuing for later");
 
                             session.PendingToHost.Enqueue(new PendingRelayMessage
                             {
@@ -268,9 +277,13 @@ namespace MegabonkTogether.Server.Services
                         client.NetPeer.Send(envelope.Payload, deliveryMethod);
                     }
                 }
+                catch (MemoryPackSerializationException)
+                {
+                    logger.LogDebug($"Packet corruption detected from {peer.Address}, discarding");
+                }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, $"Error handling network receive from {peer.Address}");
+                    logger.LogWarning(ex, $"Unexpected error handling network receive from {peer.Address}");
                 }
             };
 
@@ -523,21 +536,21 @@ namespace MegabonkTogether.Server.Services
                     return;
                 }
 
-                logger.LogInformation($"  -> Introducing CLIENT {clientId} ({clientExternal}/{clientInternal}) TO HOST {hostId}");
-                udpServer.NatPunchModule.NatIntroduce(
-                    clientInternal, clientExternal,
-                    hostInternal, hostExternal,
-                    pairKey
-                );
+                //logger.LogInformation($"  -> Introducing CLIENT {clientId} ({clientExternal}/{clientInternal}) TO HOST {hostId}");
+                //udpServer.NatPunchModule.NatIntroduce(
+                //    clientInternal, clientExternal,
+                //    hostInternal, hostExternal,
+                //    pairKey
+                //);
 
-                logger.LogInformation($"  -> Introducing HOST {hostId} ({hostExternal}/{hostInternal}) TO CLIENT {clientId}");
-                udpServer.NatPunchModule.NatIntroduce(
-                    hostInternal, hostExternal,
-                    clientInternal, clientExternal,
-                    pairKey
-                );
+                //logger.LogInformation($"  -> Introducing HOST {hostId} ({hostExternal}/{hostInternal}) TO CLIENT {clientId}");
+                //udpServer.NatPunchModule.NatIntroduce(
+                //    hostInternal, hostExternal,
+                //    clientInternal, clientExternal,
+                //    pairKey
+                //);
 
-                logger.LogInformation($"Successfully sent bidirectional NAT introduction for pair {pairKey}");
+                //logger.LogInformation($"Successfully sent bidirectional NAT introduction for pair {pairKey}");
             }
             catch (Exception ex)
             {
