@@ -14,6 +14,7 @@ namespace MegabonkTogether.Configuration
         public static ConfigEntry<uint> RDVServerPort { get; private set; }
         public static ConfigEntry<bool> ShowChangelog { get; private set; }
         public static ConfigEntry<string> PreviousVersion { get; private set; }
+        public static ConfigEntry<bool> AllowSavesDuringNetplay { get; private set; }
 
         public static void Initialize(ConfigFile config)
         {
@@ -54,6 +55,12 @@ namespace MegabonkTogether.Configuration
                 "PreviousVersion",
                 "",
                 "Internal flag to store the previous version before an update. Do not modify manually."
+            );
+            AllowSavesDuringNetplay = config.Bind(
+                "Gameplay",
+                "AllowSavesDuringNetplay",
+                false,
+                "Allow game saves during netplay sessions."
             );
         }
 

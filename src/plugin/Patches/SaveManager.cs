@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using MegabonkTogether.Common;
+using MegabonkTogether.Configuration;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -17,8 +18,7 @@ namespace MegabonkTogether.Patches
         private static readonly IAutoUpdaterService autoUpdaterService = Plugin.Services.GetService<IAutoUpdaterService>();
 
         /// <summary>
-        /// Prevent saving on netplay sessions.
-        /// level.
+        /// Prevent saving on netplay sessions unless allowed in config.
         /// </summary>
         [HarmonyPrefix]
         [HarmonyPatch(nameof(SaveManager.SaveStats))]
@@ -26,15 +26,17 @@ namespace MegabonkTogether.Patches
         {
             if (synchronizationService.HasNetplaySessionInitialized() || synchronizationService.IsLoadingNextLevel())
             {
-                Plugin.Log.LogInfo("Skipping SaveStats during netplay session");
-                return false;
+                if (!ModConfig.AllowSavesDuringNetplay.Value)
+                {
+                    Plugin.Log.LogInfo("Skipping SaveStats during netplay session");
+                    return false;
+                }
             }
-            return false;
+            return true;
         }
 
         /// <summary>
-        /// Prevent saving on netplay sessions.
-        /// level.
+        /// Prevent saving on netplay sessions unless allowed in config.
         /// </summary>
         [HarmonyPrefix]
         [HarmonyPatch(nameof(SaveManager.SaveProgression))]
@@ -42,15 +44,17 @@ namespace MegabonkTogether.Patches
         {
             if (synchronizationService.HasNetplaySessionInitialized() || synchronizationService.IsLoadingNextLevel())
             {
-                Plugin.Log.LogInfo("Skipping SaveProgression during netplay session");
-                return false;
+                if (!ModConfig.AllowSavesDuringNetplay.Value)
+                {
+                    Plugin.Log.LogInfo("Skipping SaveProgression during netplay session");
+                    return false;
+                }
             }
-            return false;
+            return true;
         }
 
         /// <summary>
-        /// Prevent saving on netplay sessions.
-        /// level.
+        /// Prevent saving on netplay sessions unless allowed in config.
         /// </summary>
         [HarmonyPrefix]
         [HarmonyPatch(nameof(SaveManager.SaveConfig))]
@@ -58,15 +62,17 @@ namespace MegabonkTogether.Patches
         {
             if (synchronizationService.HasNetplaySessionInitialized() || synchronizationService.IsLoadingNextLevel())
             {
-                Plugin.Log.LogInfo("Skipping SaveConfig during netplay session");
-                return false;
+                if (!ModConfig.AllowSavesDuringNetplay.Value)
+                {
+                    Plugin.Log.LogInfo("Skipping SaveConfig during netplay session");
+                    return false;
+                }
             }
-            return false;
+            return true;
         }
 
         /// <summary>
-        /// Prevent saving on netplay sessions.
-        /// level.
+        /// Prevent saving on netplay sessions unless allowed in config.
         /// </summary>
         [HarmonyPrefix]
         [HarmonyPatch(nameof(SaveManager.SaveTemp))]
@@ -74,10 +80,13 @@ namespace MegabonkTogether.Patches
         {
             if (synchronizationService.HasNetplaySessionInitialized() || synchronizationService.IsLoadingNextLevel())
             {
-                Plugin.Log.LogInfo("Skipping SaveTemp during netplay session");
-                return false;
+                if (!ModConfig.AllowSavesDuringNetplay.Value)
+                {
+                    Plugin.Log.LogInfo("Skipping SaveTemp during netplay session");
+                    return false;
+                }
             }
-            return false;
+            return true;
         }
 
         /// <summary>

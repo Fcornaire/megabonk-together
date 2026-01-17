@@ -11,6 +11,7 @@
 changes = [
     "Properly queue encounter reward: This should prevent missing rewards when multiples encounters (Level Up, Shrines, Chest,...) happen at the same time. This should also fix the random crash some people where having as i believe it's related to the same issue. Please open an issue at https://github.com/megabonk-together/megabonk-together/issues if you still encounter this problem with the crash logs as i'm having a hard time replicating it.",
     "Fixed (i hope) button selection reset issue in character window",
+    "Added option to allow saving in netplay sessions",
     "Fixed projectile not despawning in singleplayer mode",
     "Fixed some connection issues in relay mode for some users"
 ]

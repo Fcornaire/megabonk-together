@@ -536,21 +536,21 @@ namespace MegabonkTogether.Server.Services
                     return;
                 }
 
-                //logger.LogInformation($"  -> Introducing CLIENT {clientId} ({clientExternal}/{clientInternal}) TO HOST {hostId}");
-                //udpServer.NatPunchModule.NatIntroduce(
-                //    clientInternal, clientExternal,
-                //    hostInternal, hostExternal,
-                //    pairKey
-                //);
+                logger.LogInformation($"  -> Introducing CLIENT {clientId} ({clientExternal}/{clientInternal}) TO HOST {hostId}");
+                udpServer.NatPunchModule.NatIntroduce(
+                    clientInternal, clientExternal,
+                    hostInternal, hostExternal,
+                    pairKey
+                );
 
-                //logger.LogInformation($"  -> Introducing HOST {hostId} ({hostExternal}/{hostInternal}) TO CLIENT {clientId}");
-                //udpServer.NatPunchModule.NatIntroduce(
-                //    hostInternal, hostExternal,
-                //    clientInternal, clientExternal,
-                //    pairKey
-                //);
+                logger.LogInformation($"  -> Introducing HOST {hostId} ({hostExternal}/{hostInternal}) TO CLIENT {clientId}");
+                udpServer.NatPunchModule.NatIntroduce(
+                    hostInternal, hostExternal,
+                    clientInternal, clientExternal,
+                    pairKey
+                );
 
-                //logger.LogInformation($"Successfully sent bidirectional NAT introduction for pair {pairKey}");
+                logger.LogInformation($"Successfully sent bidirectional NAT introduction for pair {pairKey}");
             }
             catch (Exception ex)
             {

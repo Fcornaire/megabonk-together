@@ -1,4 +1,5 @@
-﻿using MegabonkTogether.Common.Models;
+﻿using Assets.Scripts.Settings___Saves.SaveFiles;
+using MegabonkTogether.Common.Models;
 using MegabonkTogether.Configuration;
 using MegabonkTogether.Helpers;
 using MegabonkTogether.Scripts.Button;
@@ -31,6 +32,11 @@ namespace MegabonkTogether.Scripts
         private TMP_InputField codeInput;
         private GameObject codeLabel;
 
+        private GameObject saveToggleSetting;
+        private CustomButton saveToggleLeftButton;
+        private CustomButton saveToggleRightButton;
+        private TextMeshProUGUI saveToggleStatusText;
+
         protected void Awake()
         {
             filter = new ProfanityFilter.ProfanityFilter();
@@ -45,6 +51,7 @@ namespace MegabonkTogether.Scripts
         {
             CreateCloseButton();
             CreatePlayerNameInput();
+            CreateSaveToggle();
             CreateMatchButtons();
             CreateStopButton();
             CreateFriendliesUI();
@@ -135,6 +142,97 @@ namespace MegabonkTogether.Scripts
             labelText.alignment = TextAlignmentOptions.Center;
             labelText.fontSize = 50;
             labelText.color = Color.white;
+        }
+
+        private void CreateSaveToggle()
+        {
+            var settings = mainMenu.settings.GetComponent<Settings>();
+            var settingPrefab = settings.GetSettingPrefab(SettingType.Enum);
+
+            saveToggleSetting = GameObject.Instantiate(settingPrefab, panel.transform);
+
+            var rectTransform = saveToggleSetting.GetComponent<RectTransform>();
+            rectTransform.anchorMin = new Vector2(0.5f, 0.6f);
+            rectTransform.anchorMax = new Vector2(0.5f, 0.6f);
+            rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            rectTransform.anchoredPosition = new Vector2(0, -25);
+            rectTransform.sizeDelta = new Vector2(450, 60);
+
+            var textComponents = Il2CppFindHelper.RuntimeGetComponentsInChildren<TextMeshProUGUI>(saveToggleSetting);
+            foreach (var textComp in textComponents)
+            {
+                if (textComp.name.StartsWith("Text"))
+                {
+                    textComp.text = "   Allow Saves"; //This is ass but do the trick of moving a bit to the right
+                    textComp.fontSize = 25;
+                    textComp.enableWordWrapping = false;
+                }
+                else if (textComp.name.StartsWith("StatusText"))
+                {
+                    saveToggleStatusText = textComp;
+                    saveToggleStatusText.gameObject.SetActive(true);
+                    UpdateSaveToggleStatus();
+                }
+            }
+
+            var buttons = Il2CppFindHelper.RuntimeGetComponentsInChildren<UnityEngine.UI.Button>(saveToggleSetting);
+            foreach (var btn in buttons)
+            {
+                if (btn.name == "B_Left")
+                {
+                    var origButton = btn.GetComponent<MyButtonNormal>();
+                    if (origButton != null)
+                    {
+                        UnityEngine.Object.DestroyImmediate(origButton);
+                    }
+
+                    btn.onClick = new();
+
+                    saveToggleLeftButton = btn.gameObject.AddComponent<CustomButton>();
+                    saveToggleLeftButton.SetOnClickAction(OnSaveToggleLeftClicked);
+                }
+                else if (btn.name == "B_Right")
+                {
+                    var origButton = btn.GetComponent<MyButtonNormal>();
+                    if (origButton != null)
+                    {
+                        UnityEngine.Object.DestroyImmediate(origButton);
+                    }
+
+                    btn.onClick = new();
+
+                    saveToggleRightButton = btn.gameObject.AddComponent<CustomButton>();
+                    saveToggleRightButton.SetOnClickAction(OnSaveToggleRightClicked);
+                }
+            }
+        }
+
+        private void OnSaveToggleLeftClicked()
+        {
+            AudioManager.Instance.PlaySfx(AudioManager.Instance.uiClick.sounds[0]);
+            ToggleSaveOption(false);
+        }
+
+        private void OnSaveToggleRightClicked()
+        {
+            AudioManager.Instance.PlaySfx(AudioManager.Instance.uiClick.sounds[0]);
+            ToggleSaveOption(true);
+        }
+
+        private void ToggleSaveOption(bool isEnabled)
+        {
+            ModConfig.AllowSavesDuringNetplay.Value = isEnabled;
+            ModConfig.Save();
+            UpdateSaveToggleStatus();
+        }
+
+        private void UpdateSaveToggleStatus()
+        {
+            if (saveToggleStatusText != null)
+            {
+                saveToggleStatusText.text = ModConfig.AllowSavesDuringNetplay.Value ? "ON" : "OFF";
+                saveToggleStatusText.color = ModConfig.AllowSavesDuringNetplay.Value ? Color.green : Color.red;
+            }
         }
 
         private TextMeshProUGUI CreateInputText(GameObject parent)
@@ -660,6 +758,7 @@ namespace MegabonkTogether.Scripts
             closeButton.gameObject.SetActive(isVisible);
             playerNameInput.gameObject.SetActive(isVisible);
             label.SetActive(isVisible);
+            saveToggleSetting.SetActive(isVisible);
         }
 
         private void UpdateFriendliesUI(bool isVisible)
@@ -788,7 +887,7 @@ namespace MegabonkTogether.Scripts
             AudioManager.Instance.PlaySfx(AudioManager.Instance.uiSelect.sounds[0]);
 
             elapsed = 0f;
-            
+
             while (elapsed < timeout && !Plugin.Instance.NetworkHandler.HasFoundMatch.HasValue)
             {
                 if (Plugin.Instance.NetworkHandler.IsNetworkInterruptedStatus)
