@@ -267,12 +267,33 @@ namespace MegabonkTogether.Services
                 try
                 {
                     byte[] data = reader.GetRemainingBytes();
-                    var deserializedMsg = MemoryPackSerializer.Deserialize<IGameNetworkMessage>(data);
+
+                    IGameNetworkMessage deserializedMsg;
+                    try
+                    {
+                        deserializedMsg = MemoryPackSerializer.Deserialize<IGameNetworkMessage>(data);
+                    }
+                    catch (MemoryPackSerializationException)
+                    {
+                        logger.LogDebug($"Corrupted packet from {peer.Address}, discarding");
+                        return;
+                    }
+
+                    if (deserializedMsg == null)
+                    {
+                        logger.LogDebug($"Failed to deserialize message from {peer.Address}");
+                        return;
+                    }
+
                     HandleMessage(deserializedMsg, peer.Id);
+                }
+                catch (MemoryPackSerializationException)
+                {
+                    logger.LogDebug($"Packet corruption detected from {peer.Address}, discarding");
                 }
                 catch (Exception ex)
                 {
-                    Plugin.Log.LogError($"Error handling network receive: {ex}");
+                    Plugin.Log.LogWarning($"Unexpected error handling network : {ex}");
                 }
             };
 
