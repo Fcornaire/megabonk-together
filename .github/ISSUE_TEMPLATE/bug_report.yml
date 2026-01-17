@@ -1,7 +1,8 @@
 name: Bug Report
 description: Report a bug or issue with MegabonkTogether
 title: "[Bug]: "
-labels: ["bug"]
+labels:
+  - bug
 body:
   - type: markdown
     attributes:
