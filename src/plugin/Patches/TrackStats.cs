@@ -1,6 +1,6 @@
 ﻿using Assets.Scripts.Actors;
 using Assets.Scripts.Actors.Enemies;
-using Assets.Scripts.Inventory__Items__Pickups.GoldAndMoney;
+using Assets.Scripts.Saves___Serialization.Progression.Stats;
 using HarmonyLib;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,17 +8,17 @@ using MonoMod.Utils;
 
 namespace MegabonkTogether.Patches
 {
-    [HarmonyPatch(typeof(MoneyUtility))]
-    internal static class MoneyUtilityPatches
+    [HarmonyPatch(typeof(TrackStats))]
+    internal static class TrackStatsPatches
     {
         private static readonly ISynchronizationService synchronizationService = Plugin.Services.GetService<ISynchronizationService>();
-        private static readonly IPlayerManagerService playerManagerService = Plugin.Services.GetService<IPlayerManagerService>();
+        private static readonly IPlayerManagerService playerManagerService = Plugin.Services.GetRequiredService<IPlayerManagerService>();
 
         /// <summary>
-        /// Skip money flying if enemy was killed by another player
+        ///  Track stats per player
         /// </summary>
         [HarmonyPrefix]
-        [HarmonyPatch(nameof(MoneyUtility.OnEnemyDied))]
+        [HarmonyPatch(nameof(TrackStats.OnEnemyDied))]
         public static bool OnEnemyDied_Prefix(Enemy enemy, DamageContainer deathSource)
         {
             if (!synchronizationService.HasNetplaySessionStarted())
@@ -39,6 +39,5 @@ namespace MegabonkTogether.Patches
 
             return true;
         }
-
     }
 }

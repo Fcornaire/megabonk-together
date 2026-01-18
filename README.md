@@ -45,8 +45,10 @@ More info at [Notable Network Changes](./NETPLAY_CHANGES.md)
 
 ### v2.0.1
 
-- 💾 **Added option** to allow saving in netplay sessions
+- 💾 **Added option** to allow saving in netplay sessions. Use at your own risk
 - 📦 **Properly queue encounter rewards** to prevent missing rewards when multiple encounters happen simultaneously. This should also fix random crash hopefully
+- 📊 **Properly track kills/money** per player
+- 🔌 **Fixed disconnection issues** preventing reconnection
 - 🎮 **Fixed button selection reset issue** in character window
 - 🎯 **Fixed projectile not despawning** in singleplayer mode
 - 🔗 **Fixed some connection issues** in relay mode for some users

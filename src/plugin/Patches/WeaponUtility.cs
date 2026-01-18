@@ -47,8 +47,8 @@ namespace MegabonkTogether.Patches
             {
                 return;
             }
-
-            var hasOwnerId = DynamicData.For(__result).Get<uint?>("ownerId"); //TODO: track DamageContainer so we dont have to do this check
+            var dynDamageContainer = DynamicData.For(__result);
+            var hasOwnerId = dynDamageContainer.Get<uint?>("ownerId"); //TODO: track DamageContainer so we dont have to do this check
             if (hasOwnerId.HasValue)
             {
                 return;
@@ -57,14 +57,14 @@ namespace MegabonkTogether.Patches
             var owner = playerManagerService.GetNetPlayerByWeapon(weaponBase);
             if (owner != null)
             {
-                DynamicData.For(__result).Set("ownerId", owner.ConnectionId);
+                dynDamageContainer.Set("ownerId", owner.ConnectionId);
             }
             else
             {
                 if (GameManager.Instance.player.inventory.weaponInventory.weapons.ContainsValue(weaponBase))
                 {
                     var localPlayer = playerManagerService.GetLocalPlayer();
-                    DynamicData.For(__result).Set("ownerId", localPlayer.ConnectionId);
+                    dynDamageContainer.Set("ownerId", localPlayer.ConnectionId);
                 }
             }
         }

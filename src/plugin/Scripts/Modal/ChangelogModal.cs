@@ -166,6 +166,14 @@ namespace MegabonkTogether.Scripts.Modal
 
             var sb = new StringBuilder();
 
+            sb.AppendLine("<color=#00D9FF><size=25>Thanks for playing!</size></color>");
+            sb.AppendLine();
+            sb.AppendLine("<color=#00D9FF><size=20>If you like the mod, consider a small support on Patreon at</size></color>");
+            sb.AppendLine("<color=#00D9FF><size=20>https://www.patreon.com/c/DShadModdingAdventure</size></color>");
+            sb.AppendLine();
+            sb.AppendLine("<color=#555555>────────────────────────</color>");
+            sb.AppendLine();
+
             foreach (var versionChange in changes)
             {
                 sb.AppendLine($"<color=#FFD700><size=32><b>v{versionChange.Version}</b></size></color>"); // Version header in gold (#FFD700)

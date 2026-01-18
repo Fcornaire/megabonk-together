@@ -151,6 +151,11 @@ namespace MegabonkTogether.Scripts
                         hasFoundMatch = null;
                         IsNetworkInterrupted = false;
                         matchMakerFailureMessage = string.Empty;
+                        if (isConnectedToMatchMaker.HasValue && !isConnectedToMatchMaker.Value)
+                        {
+                            isConnectedToMatchMaker = null;
+                        }
+
                         await websocketClientService.ConnectAndMatchAsync(ModConfig.ServerUrl.Value, ModConfig.RDVServerPort.Value, this);
                     }
                     catch (System.Exception ex)
@@ -171,6 +176,7 @@ namespace MegabonkTogether.Scripts
 
         public void ResetNetworking()
         {
+            isConnectedToMatchMaker = null;
             Plugin.Instance.Mode = new();
             isHost = false;
 
@@ -201,7 +207,6 @@ namespace MegabonkTogether.Scripts
             }
 
             playerManagerService?.Reset();
-            isConnectedToMatchMaker = null;
 
             if (websocketClientService != null)
             {

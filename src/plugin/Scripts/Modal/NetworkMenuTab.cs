@@ -156,15 +156,15 @@ namespace MegabonkTogether.Scripts
             rectTransform.anchorMax = new Vector2(0.5f, 0.6f);
             rectTransform.pivot = new Vector2(0.5f, 0.5f);
             rectTransform.anchoredPosition = new Vector2(0, -25);
-            rectTransform.sizeDelta = new Vector2(450, 60);
+            rectTransform.sizeDelta = new Vector2(700, 60);
 
             var textComponents = Il2CppFindHelper.RuntimeGetComponentsInChildren<TextMeshProUGUI>(saveToggleSetting);
             foreach (var textComp in textComponents)
             {
                 if (textComp.name.StartsWith("Text"))
                 {
-                    textComp.text = "   Allow Saves"; //This is ass but do the trick of moving a bit to the right
-                    textComp.fontSize = 25;
+                    textComp.text = "Allow Saving progression\nUse at your own risk";
+                    textComp.fontSize = 20;
                     textComp.enableWordWrapping = false;
                 }
                 else if (textComp.name.StartsWith("StatusText"))
@@ -351,7 +351,7 @@ namespace MegabonkTogether.Scripts
             randomRectTransform.anchorMin = new Vector2(0.5f, 0.5f);
             randomRectTransform.anchorMax = new Vector2(0.5f, 0.5f);
             randomRectTransform.pivot = new Vector2(0.5f, 0.5f);
-            randomRectTransform.anchoredPosition = new Vector2(-180f, -50f);
+            randomRectTransform.anchoredPosition = new Vector2(-180f, -100f);
             randomRectTransform.sizeDelta = new Vector2(300, 70);
 
             var friendliesButtonObj = GameObject.Instantiate(mainMenu.btnPlay.gameObject);
@@ -386,7 +386,7 @@ namespace MegabonkTogether.Scripts
             friendliesRectTransform.anchorMin = new Vector2(0.5f, 0.5f);
             friendliesRectTransform.anchorMax = new Vector2(0.5f, 0.5f);
             friendliesRectTransform.pivot = new Vector2(0.5f, 0.5f);
-            friendliesRectTransform.anchoredPosition = new Vector2(180f, -50f);
+            friendliesRectTransform.anchoredPosition = new Vector2(180f, -100f);
             friendliesRectTransform.sizeDelta = new Vector2(300, 70);
         }
 

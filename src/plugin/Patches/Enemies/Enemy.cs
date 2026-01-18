@@ -93,6 +93,28 @@ namespace MegabonkTogether.Patches.Enemies
             {
                 return;
             }
+            uint? ownerId = DynamicData.For(dc).Get<uint?>("ownerId");
+
+            synchronizationService.OnEnemyDied(__instance, ownerId);
+        }
+
+        /// <summary>
+        /// Same as above 
+        /// </summary>
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(Enemy.EnemyDied), [])]
+        public static void EnemyDiedWithoutDc_Postfix(Enemy __instance)
+        {
+            if (!synchronizationService.HasNetplaySessionStarted())
+            {
+                return;
+            }
+
+            if (!Plugin.CAN_SEND_MESSAGES)
+            {
+                return;
+            }
+
             synchronizationService.OnEnemyDied(__instance);
         }
 

@@ -80,7 +80,7 @@ namespace MegabonkTogether.Services
 
         public void OnSpawnedEnemy(Enemy enemy, EEnemy enemyName, Vector3 position, int waveNumber, bool forceSpawn, EEnemyFlag flag, bool canBeElite, float extraSizeMultiplier);
         public void OnSelectedCharacter();
-        public void OnEnemyDied(Enemy instance);
+        public void OnEnemyDied(Enemy instance, uint? ownerId = null);
         public void OnSpawnedProjectile(Il2CppObjectBase instance, uint? owner = null);
         public void OnProjectileDone(ProjectileBase instance);
         public void OnPickupOrbSpawned(EPickup ePickup, Vector3 pos);
@@ -1477,7 +1477,7 @@ namespace MegabonkTogether.Services
         }
 
 
-        public void OnEnemyDied(Enemy enemy)
+        public void OnEnemyDied(Enemy enemy, uint? diedByOwnerId = null)
         {
             var enemySpawned = enemyManagerService.GetEnemyByReference(enemy);
             if (enemySpawned.Value == null)
@@ -1491,7 +1491,7 @@ namespace MegabonkTogether.Services
             IGameNetworkMessage message = new EnemyDied
             {
                 EnemyId = enemySpawned.Key,
-                DiedByOwnerId = playerManagerService.GetLocalPlayer().ConnectionId
+                DiedByOwnerId = diedByOwnerId ?? playerManagerService.GetLocalPlayer().ConnectionId
             };
 
             var isHost = IsServerMode() ?? false;
@@ -1521,6 +1521,7 @@ namespace MegabonkTogether.Services
             var damageContainer = new DamageContainer(0.0f, ""); //TODO track dmgContainer ?
             damageContainer.damage = enemy.hp + 1;
 
+            DynamicData.For(enemy).Set("ownerId", died.DiedByOwnerId);
             DynamicData.For(damageContainer).Set("ownerId", died.DiedByOwnerId);
 
             Plugin.CAN_SEND_MESSAGES = false;
