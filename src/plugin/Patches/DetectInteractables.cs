@@ -3,6 +3,7 @@ using Assets.Scripts.Inventory__Items__Pickups.Interactables;
 using HarmonyLib;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
+using UnityEngine;
 
 namespace MegabonkTogether.Patches
 {
@@ -17,24 +18,46 @@ namespace MegabonkTogether.Patches
 
         [HarmonyPrefix]
         [HarmonyPatch(nameof(DetectInteractables.TryInteract))]
-        public static void TryInteract_Postfix(DetectInteractables __instance)
+        public static bool TryInteract_Postfix(DetectInteractables __instance)
         {
             if (!Plugin.CAN_SEND_MESSAGES) //Prevent sending messages on received events
             {
-                return;
+                return true;
             }
 
             if (__instance.currentInteractable == null)
             {
-                return;
+                return true;
             }
 
             if (!CanSynchronize(__instance))
             {
-                return;
+                return true;
             }
 
             synchronizationService.OnInteractableUsed(__instance.currentInteractable);
+
+            if (!CanSimulateClientSide(__instance.currentInteractable))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private static bool CanSimulateClientSide(BaseInteractable interactable)
+        {
+            var challengeShrine = interactable.GetComponentInChildren<InteractableShrineChallenge>();
+            if (challengeShrine != null)
+            {
+                challengeShrine.done = true;
+                challengeShrine.fx.SetActive(true);
+                GameObject.Destroy(challengeShrine.alertIcon);
+                return false;
+            }
+
+            return true;
+
         }
 
         private static bool CanSynchronize(DetectInteractables __instance)
