@@ -18,8 +18,13 @@ namespace MegabonkTogether.Patches
 
         [HarmonyPrefix]
         [HarmonyPatch(nameof(DetectInteractables.TryInteract))]
-        public static bool TryInteract_Postfix(DetectInteractables __instance)
+        public static bool TryInteract_Prefix(DetectInteractables __instance)
         {
+            if (!synchronizationService.HasNetplaySessionStarted())
+            {
+                return true;
+            }
+
             if (!Plugin.CAN_SEND_MESSAGES) //Prevent sending messages on received events
             {
                 return true;

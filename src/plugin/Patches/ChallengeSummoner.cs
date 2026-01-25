@@ -17,6 +17,11 @@ namespace MegabonkTogether.Patches
         [HarmonyPatch(nameof(ChallengeSummoner.SpendCredits))]
         public static bool SpendCredits_Prefix(ChallengeSummoner __instance)
         {
+            if (!synchronizationService.HasNetplaySessionStarted())
+            {
+                return true;
+            }
+
             var isServer = synchronizationService.IsServerMode();
             if (!isServer.HasValue || (isServer.HasValue && !isServer.Value))
             {
