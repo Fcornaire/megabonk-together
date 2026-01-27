@@ -2114,6 +2114,12 @@ namespace MegabonkTogether.Services
                     {
                         netplayId = reviver;
                     }
+
+                    var egg = spawnedObjectManagerService.GetByReferenceInChildren<InteractableEgg>(instance.gameObject);
+                    if (egg.HasValue)
+                    {
+                        netplayId = egg;
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -2222,7 +2228,8 @@ namespace MegabonkTogether.Services
                 interactable.GetComponentInChildren<InteractableGhostBossLeave>() != null ||
                 interactable.GetComponentInChildren<InteractableGift>() != null ||
                 interactable.GetComponentInChildren<InteractableGravestone>() != null ||
-                interactable.GetComponentInChildren<InteractableReviver>() != null
+                interactable.GetComponentInChildren<InteractableReviver>() != null ||
+                interactable.GetComponentInChildren<InteractableEgg>() != null
             )
             {
                 return InteractableAction.Interact;
@@ -2324,7 +2331,18 @@ namespace MegabonkTogether.Services
                     var shrineChallenge = interactableObj.GetComponent<InteractableShrineChallenge>();
                     if (shrineChallenge != null)
                     {
-                        shrineChallenge.Interact();
+                        var isHost = IsServerMode() ?? false;
+                        if (isHost)
+                        {
+                            shrineChallenge.Interact();
+                        }
+                        else
+                        {
+                            shrineChallenge.done = true;
+                            shrineChallenge.fx.SetActive(true);
+                            GameObject.Destroy(shrineChallenge.alertIcon);
+                        }
+
                         break;
                     }
 
@@ -2451,6 +2469,23 @@ namespace MegabonkTogether.Services
                     if (interactableReviver != null)
                     {
                         interactableReviver.Interact();
+                        break;
+                    }
+
+                    var interactableEgg = interactableObj.GetComponentInChildren<InteractableEgg>();
+                    if (interactableEgg != null)
+                    {
+                        var isHost = IsServerMode() ?? false;
+                        if (isHost)
+                        {
+                            interactableEgg.Interact();
+                        }
+                        else
+                        {
+                            interactableEgg.done = true;
+                            interactableEgg.breakFx.SetActive(true);
+                            GameObject.Destroy(interactableObj);
+                        }
                         break;
                     }
 

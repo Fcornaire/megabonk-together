@@ -188,7 +188,10 @@ namespace MegabonkTogether.Patches.Unity
                EffectManager.Instance.katanaQuest == original ||
                EffectManager.Instance.luckTomeQuest == original ||
                EffectManager.Instance.shotgunQuest == original ||
-               EffectManager.Instance.presentQuest == original)
+               EffectManager.Instance.presentQuest == original ||
+               EffectManager.Instance.frogQuest1 == original ||
+               EffectManager.Instance.frogQuest2 == original ||
+               EffectManager.Instance.frogQuest3 == original)
             {
                 //if (EffectManager.Instance.bushQuest == original)
                 //{

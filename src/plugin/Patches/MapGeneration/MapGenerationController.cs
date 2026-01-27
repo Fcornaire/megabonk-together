@@ -79,6 +79,10 @@ namespace MegabonkTogether.Patches.MapGeneration
                     }
                 }
 
+                Plugin.Instance.AddPrefab(EffectManager.Instance.frogQuest1);
+                Plugin.Instance.AddPrefab(EffectManager.Instance.frogQuest2);
+                Plugin.Instance.AddPrefab(EffectManager.Instance.frogQuest3);
+
                 if (__instance._mapData_5__4.mapType == Assets.Scripts._Data.MapsAndStages.EMapType.ProceduralMesh)
                 {
                     Plugin.Instance.AddPrefab(__instance.__4__this.bossPortal);
