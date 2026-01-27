@@ -42,9 +42,10 @@ namespace MegabonkTogether.Patches
 
             synchronizationService.OnInteractableUsed(__instance.currentInteractable);
 
-            if (!CanSimulateClientSide(__instance.currentInteractable))
+            var isHost = synchronizationService.IsServerMode() ?? false;
+            if (!isHost)
             {
-                return false;
+                return CanSimulateClientSide(__instance.currentInteractable);
             }
 
             return true;
@@ -58,6 +59,15 @@ namespace MegabonkTogether.Patches
                 challengeShrine.done = true;
                 challengeShrine.fx.SetActive(true);
                 GameObject.Destroy(challengeShrine.alertIcon);
+                return false;
+            }
+
+            var egg = interactable.GetComponentInChildren<InteractableEgg>();
+            if (egg != null)
+            {
+                egg.done = true;
+                egg.breakFx.SetActive(true);
+                interactable.gameObject.SetActive(false);
                 return false;
             }
 
