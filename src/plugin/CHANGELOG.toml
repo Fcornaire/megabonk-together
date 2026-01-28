@@ -6,10 +6,16 @@
 #     "Change 2 description",
 # ]
 
+[version."2.0.2"]
+changes = [
+    "Fixed item Ghost crashing : This was the main reason everyone was crashing. (Note: There might be other items causing issues, please report them if you find any at https://github.com/Fcornaire/megabonk-together/issues)",
+    "Added egg interaction support",
+    "Fixed client side Challenge shrines interactions not working properly"
+]
 
 [version."2.0.1"]
 changes = [
-    "Properly queue encounter reward: This should prevent missing rewards when multiples encounters (Level Up, Shrines, Chest,...) happen at the same time. This should also fix the random crash some people where having as i believe it's related to the same issue. Please open an issue at https://github.com/megabonk-together/megabonk-together/issues if you still encounter this problem with the crash logs as i'm having a hard time replicating it.",
+    "Properly queue encounter reward: This should prevent missing rewards when multiples encounters (Level Up, Shrines, Chest,...) happen at the same time. This should also fix the random crash some people where having as i believe it's related to the same issue. Please open an issue at https://github.com/Fcornaire/megabonk-together/issues if you still encounter this problem with the crash logs as i'm having a hard time replicating it.",
     "Added option to allow saving progression in netplay sessions. Use at your own risk",
     "Properly track kills/money per player",
     "Fixed disconnection issues preventing reconnection",
