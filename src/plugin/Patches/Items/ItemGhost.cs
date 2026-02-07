@@ -18,11 +18,6 @@ namespace MegabonkTogether.Patches.Items
         [HarmonyPatch(nameof(ItemGhost.OnInteracted))]
         public static bool OnInteracted_Prefix(bool success)
         {
-            if (!synchronizationService.HasNetplaySessionStarted())
-            {
-                return true;
-            }
-
             if (!success)
             {
                 return false;
