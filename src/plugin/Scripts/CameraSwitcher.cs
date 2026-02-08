@@ -266,6 +266,11 @@ namespace MegabonkTogether.Scripts
             Reset();
         }
 
+        public Transform GetCurrentTarget()
+        {
+            return targetTransform;
+        }
+
         private void Reset()
         {
             isFollowingTarget = false;

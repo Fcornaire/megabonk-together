@@ -34,6 +34,13 @@ using UnityEngine.UI;
 
 namespace MegabonkTogether
 {
+    public enum DistanceToPlayer
+    {
+        Close,
+        Medium,
+        Far
+    }
+
     [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
     public class Plugin : BasePlugin
     {
@@ -471,5 +478,35 @@ namespace MegabonkTogether
             WorldSize = Vector3.zero;
             OriginalWorldSize = Vector3.zero;
         }
+
+        public static DistanceToPlayer GetDistanceToPlayer(Vector3 position)
+        {
+            var player = GameManager.Instance.player;
+            if (player == null)
+            {
+                return DistanceToPlayer.Far;
+            }
+
+            var target = player.transform.position;
+            if (player.IsDead())
+            {
+                target = Instance.CameraSwitcher.GetCurrentTarget().position;
+            }
+
+            var distance = Vector3.Distance(position, target);
+            if (distance < 25f)
+            {
+                return DistanceToPlayer.Close;
+            }
+            else if (distance < 60f)
+            {
+                return DistanceToPlayer.Medium;
+            }
+            else
+            {
+                return DistanceToPlayer.Far;
+            }
+        }
+
     }
 }
