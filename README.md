@@ -174,6 +174,60 @@ If you want to run your own matchmaking/relay server, check the [Self-Hosting Gu
 - For some obscure reason, The game crash when loading the map. this is mostly rare and you can just close and restart the game if it ever happen. Dunno why it sometimes crash here ¯\_(ツ)\_/¯
 - Not all the stuff happening in the game are perfectly synchronized, like getting money when you shouldn't or ghost item not spawning or whatever. I will mostly be looking for game breaking bug before looking at those
 
+## Linux Support
+
+The mod is now compatible with Linux (Steam Deck / Proton).
+
+### Expected Folder Structure (Linux)
+
+After following the steps above, your Megabonk directory should look like this:
+
+```text
+Megabonk/
+├── BepInEx/
+│   ├── core/
+│   ├── config/
+│   ├── interop/             <-- Generated on first run
+│   ├── unity-libs/          <-- Generated on first run
+│   └── plugins/
+│       └── MegabonkTogether/
+│           ├── MegabonkTogether.dll
+│           ├── MegabonkTogether.Common.dll
+│           └── (other dependency DLLs)
+├── Megabonk_Data/
+├── run_bepinex.sh           <-- BepInEx Linux entry point
+├── Megabonk.x86_64          <-- Game executable
+├── GameAssembly.so
+└── UnityPlayer.so
+```
+
+### Installation (Linux)
+
+1. **Install BepInEx 6 (Bleeding Edge) for IL2CPP Linux:**
+    - Download the latest `BepInEx-Unity.IL2CPP-linux-x64-6.0.0-be.*` build from [BepisBuilds](https://builds.bepinex.dev/projects/bepinex_be) or [Thunderstore](https://thunderstore.io/package/BepInEx/BepInExPack_IL2CPP/).
+    - Extract the contents into your game directory (`.../steamapps/common/Megabonk/`).
+    - Run the `run_bepinex.sh` script once to initialize BepInEx. You may need to edit it to point to the correct game executable name (`Megabonk.x86_64`).
+
+2. **Install the Mod:**
+    - Download the latest release.
+    - Extract the `Megabonk-Together` folder into `.../Megabonk/BepInEx/plugins/`.
+    - Launch the game using the `run_bepinex.sh` script or by setting the Steam launch options to run the script.
+
+### Building (Linux)
+
+- Ensure you have the .NET 8.0 SDK installed.
+- Clone the repository.
+- The build system will automatically detect the Linux environment and use `cp` instead of `xcopy`.
+- A `Directory.Build.props` file can be used to set the `MegabonkPath` to your local game directory (default: `Directory.Build.props` is git-ignored).
+
+```xml
+<Project>
+  <PropertyGroup>
+    <MegabonkPath>/home/user/.local/share/Steam/steamapps/common/Megabonk</MegabonkPath>
+  </PropertyGroup>
+</Project>
+```
+
 # Building (Developer)
 
 - Clone this repository
