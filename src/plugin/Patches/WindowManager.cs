@@ -3,6 +3,7 @@ using HarmonyLib;
 using MegabonkTogether.Common;
 using MegabonkTogether.Common.Models;
 using MegabonkTogether.Helpers;
+using MegabonkTogether.Patches.Enemies;
 using MegabonkTogether.Scripts.Button;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,6 +39,7 @@ namespace MegabonkTogether.Patches
         {
             if (newWindow.name == "Menu")
             {
+                EnemyPatch.EnemiesDistanceThrottler.ClearAll();
                 Plugin.Instance.NetworkHandler.ResetNetworking();
                 Plugin.Instance.NetPlayersDisplayer.ResetCards();
                 Plugin.Instance.HideModal();

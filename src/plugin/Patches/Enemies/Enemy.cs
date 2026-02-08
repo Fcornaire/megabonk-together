@@ -1,6 +1,7 @@
 ﻿using Assets.Scripts.Actors;
 using Assets.Scripts.Actors.Enemies;
 using HarmonyLib;
+using MegabonkTogether.Helpers;
 using MegabonkTogether.Scripts.Enemies;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,6 +15,8 @@ namespace MegabonkTogether.Patches.Enemies
         private static readonly ISynchronizationService synchronizationService = Plugin.Services.GetService<ISynchronizationService>();
         private static readonly IPlayerManagerService playerManagerService = Plugin.Services.GetService<IPlayerManagerService>();
         private static readonly IEnemyManagerService enemyManagerService = Plugin.Services.GetService<IEnemyManagerService>();
+
+        public static readonly DistanceThrottler EnemiesDistanceThrottler = new();
 
         /// <summary>
         /// Randomly target a player (Not necessarly the local player)
@@ -279,6 +282,63 @@ namespace MegabonkTogether.Patches.Enemies
             }
             __result = false;
             return false;
+        }
+
+        /// <summary>
+        /// Distance-based throttling for non boss enemies
+        /// only disables renderer at far distance for server and full throttling for clients
+        /// </summary>
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(Enemy.MyUpdate))]
+        public static bool MyUpdate_Prefix(Enemy __instance)
+        {
+            if (!synchronizationService.HasNetplaySessionStarted())
+            {
+                return true;
+            }
+
+            if (__instance.IsBoss() || __instance.IsStageBoss() || __instance.IsFinalBoss())
+            {
+                return true;
+            }
+
+            var instanceId = __instance.GetInstanceID();
+            var isServer = synchronizationService.IsServerMode() ?? false;
+            return EnemiesDistanceThrottler.ShouldUpdate(__instance.gameObject, instanceId, isServer);
+        }
+
+        /// <summary>
+        /// Distance-based throttling for non boss enemies
+        /// only disables renderer at far distance for server and full throttling for clients
+        /// </summary>
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(Enemy.MyFixedUpdate))]
+        public static bool MyFixedUpdate_Prefix(Enemy __instance)
+        {
+            if (!synchronizationService.HasNetplaySessionStarted())
+            {
+                return true;
+            }
+
+            if (__instance.IsBoss() || __instance.IsStageBoss() || __instance.IsFinalBoss())
+            {
+                return true;
+            }
+
+            var instanceId = __instance.GetInstanceID();
+            var isServer = synchronizationService.IsServerMode() ?? false;
+            return EnemiesDistanceThrottler.ShouldUpdate(__instance.gameObject, instanceId, isServer);
+        }
+
+        /// <summary>
+        /// Cleanup throttler tracking when enemy dies
+        /// </summary>
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(Enemy.EnemyDied), typeof(DamageContainer))]
+        public static void EnemyDied_Cleanup(Enemy __instance)
+        {
+            var instanceId = __instance.GetInstanceID();
+            EnemiesDistanceThrottler.Cleanup(instanceId);
         }
     }
 }

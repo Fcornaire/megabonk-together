@@ -1,4 +1,5 @@
 ﻿using Assets.Scripts.Inventory__Items__Pickups.Weapons.Projectiles;
+using Assets.Scripts.Objects.Particles___Effects.ParticleOpacity;
 using HarmonyLib;
 using Microsoft.Extensions.DependencyInjection;
 using MonoMod.Utils;
@@ -110,6 +111,48 @@ namespace MegabonkTogether.Patches.Projectiles
             synchronizationService.OnProjectileDone(__instance);
 
             return true;
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(ProjectileBase.Update))]
+        public static void Update_Prefix(ProjectileBase __instance)
+        {
+            if (!synchronizationService.HasNetplaySessionStarted())
+            {
+                return;
+            }
+
+            if (playerManagerService.GetNetPlayerByWeapon(__instance.weaponBase) == null)
+            {
+                return; // Don't hide local player projectiles
+            }
+
+            DistanceToPlayer distance = Plugin.GetDistanceToPlayer(__instance.transform.position);
+
+            var shouldHide = distance == DistanceToPlayer.Far;
+            UpdateProjectileOpacity(__instance, shouldHide);
+        }
+
+
+        private static void UpdateProjectileOpacity(ProjectileBase projectile, bool hide)
+        {
+            var particleOpacity = projectile.GetComponentInChildren<ParticleOpacity>();
+            if (particleOpacity == null)
+            {
+                return;
+            }
+
+            if (hide)
+            {
+                var current = SaveManager.Instance.config.cfVisualsSettings.particle_opacity;
+                SaveManager.Instance.config.cfVisualsSettings.particle_opacity = 0f;
+                particleOpacity.Refresh(true);
+                SaveManager.Instance.config.cfVisualsSettings.particle_opacity = current;
+            }
+            else
+            {
+                particleOpacity.Refresh(true);
+            }
         }
     }
 }
