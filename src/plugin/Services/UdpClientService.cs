@@ -257,14 +257,10 @@ namespace MegabonkTogether.Services
                     try
                     {
                         deserializedMsg = MemoryPackSerializer.Deserialize<IGameNetworkMessage>(data);
-                        if (deserializedMsg != null)
-                        {
-                            logger.LogDebug($"[NetIntegrity] Received {data.Length} bytes from {peer.Id} (Type: {deserializedMsg.GetType().Name})");
-                        }
                     }
                     catch (MemoryPackSerializationException)
                     {
-                        logger.LogDebug($"Corrupted packet from {peer.Address} (Size: {data.Length} bytes), discarding");
+                        logger.LogDebug($"Corrupted packet from {peer.Address}, discarding");
                         return;
                     }
 
