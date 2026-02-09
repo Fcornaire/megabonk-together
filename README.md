@@ -138,13 +138,13 @@ Private queue, Host as to share the room code (copy from the uper right button) 
 - For some obscure reason, The game crash when loading the map. this is mostly rare and you can just close and restart the game if it ever happen. Dunno why it sometimes crash here ¯\_(ツ)\_/¯
 - Not all the stuff happening in the game are perfectly synchronized, like getting money when you shouldn't or ghost item not spawning or whatever. I will mostly be looking for game breaking bug before looking at those
 
-## Linux Support
+## Linux Support (Proton / Steam Deck)
 
-The mod is now compatible with Linux (Steam Deck / Proton).
+The mod is fully compatible with Linux via **Proton**. Native Linux support is currently experimental and unstable due to BepInEx 6 compatibility issues with newer kernels (glibc/CET conflicts).
 
-### Expected Folder Structure (Linux)
+### Expected Folder Structure (Proton)
 
-After following the steps above, your Megabonk directory should look like this:
+After installation, your Megabonk directory should look like this:
 
 ```text
 Megabonk/
@@ -159,30 +159,52 @@ Megabonk/
 │           ├── MegabonkTogether.Common.dll
 │           └── (other dependency DLLs)
 ├── Megabonk_Data/
-├── run_bepinex.sh           <-- BepInEx Linux entry point
-├── Megabonk.x86_64          <-- Game executable
-├── GameAssembly.so
-└── UnityPlayer.so
+├── winhttp.dll              <-- BepInEx Hook (Critical for Proton)
+├── doorstop_config.ini
+├── Megabonk.exe             <-- Windows Executable
+├── GameAssembly.dll
+└── UnityPlayer.dll
 ```
 
-### Installation (Linux)
+### Installation
 
-1. **Install BepInEx 6 (Bleeding Edge) for IL2CPP Linux:**
-    - Download the latest `BepInEx-Unity.IL2CPP-linux-x64-6.0.0-be.*` build from [BepisBuilds](https://builds.bepinex.dev/projects/bepinex_be) or [Thunderstore](https://thunderstore.io/package/BepInEx/BepInExPack_IL2CPP/).
-    - Extract the contents into your game directory (`.../steamapps/common/Megabonk/`).
-    - Run the `run_bepinex.sh` script once to initialize BepInEx. You may need to edit it to point to the correct game executable name (`Megabonk.x86_64`).
+1. **Configure Game for Proton:**
+    - In Steam, right-click **Megabonk** -> **Properties** -> **Compatibility**.
+    - Check "Force the use of a specific Steam Play compatibility tool".
+    - Select **Proton 9.0** (or Experimental).
 
-2. **Install the Mod:**
+2. **Install BepInEx 6 (Windows x64):**
+    - Download the latest `BepInEx-Unity.IL2CPP-win-x64-6.0.0-be.*` build from [BepisBuilds](https://builds.bepinex.dev/projects/bepinex_be).
+    - Extract the contents directly into your game directory (`.../steamapps/common/Megabonk/`).
+    - **Crucial:** You must see `winhttp.dll` next to `Megabonk.exe`.
+
+3. **Configure Launch Options:**
+    - In Steam Properties -> General -> Launch Options, add:
+      ```bash
+      WINEDLLOVERRIDES="winhttp=n,b" %command%
+      ```
+    - *This tells Proton to load the local `winhttp.dll` (BepInEx) instead of the system one.*
+
+4. **First Run:**
+    - Launch the game once to let BepInEx generate the interop assemblies. This might take a minute on the splash screen.
+
+5. **Install the Mod:**
     - Download the latest release.
     - Extract the `Megabonk-Together` folder into `.../Megabonk/BepInEx/plugins/`.
-    - Launch the game using the `run_bepinex.sh` script or by setting the Steam launch options to run the script.
 
-### Building (Linux)
+### Building on Linux
 
-- Ensure you have the .NET 8.0 SDK installed.
+You can build the mod natively on Linux using the .NET 8 SDK. The build output is compatible with the Windows version of the game.
+
+- Ensure `dotnet-sdk-8.0` is installed.
 - Clone the repository.
-- The build system will automatically detect the Linux environment and use `cp` instead of `xcopy`.
-- A `Directory.Build.props` file can be used to set the `MegabonkPath` to your local game directory (default: `Directory.Build.props` is git-ignored).
+- Run the build script:
+  ```bash
+  ./build.sh
+  ```
+  *(This script automatically compiles the code and deploys it to your Steam directory if found at `~/.local/share/Steam/...`)*
+
+- A `Directory.Build.props` file can be used to override the `MegabonkPath` if your game is installed elsewhere.
 
 ```xml
 <Project>

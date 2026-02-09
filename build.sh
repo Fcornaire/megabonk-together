@@ -26,4 +26,8 @@ fi
 dotnet build
 
 echo "Build complete!"
-echo "If the game path was correct, the mod files should be in: $GAME_PATH/BepInEx/plugins/MegabonkTogether/"
+if [ -f "$GAME_PATH/Megabonk.exe" ]; then
+    echo "Files deployed to: $GAME_PATH/BepInEx/plugins/MegabonkTogether/"
+else
+    echo "WARNING: Megabonk.exe not found at $GAME_PATH. Is the path correct? (Proton version required)"
+fi
