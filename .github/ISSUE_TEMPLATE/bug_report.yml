@@ -1,0 +1,75 @@
+name: Bug Report
+description: Report a bug or issue with MegabonkTogether
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this issue! Please fill out the information below to help diagnose and fix the problem.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Please provide a clear and detailed description of the problem you're experiencing.
+      placeholder: Describe what happened, what you expected to happen, and any steps to reproduce the issue.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: If possible, provide step-by-step instructions to reproduce the issue.
+      placeholder: |
+        1. Start the game with...
+        2. Go to...
+        3. Do...
+        4. See error
+    validations:
+      required: false
+
+  - type: textarea
+    id: bepinex-logs
+    attributes:
+      label: BepInEx Logs
+      description: |
+        **Please attach your BepInEx logs!** These are critical for diagnosing issues.
+
+        Logs are typically located at: `{Your computer}/Megabonk/BepInEx/LogOutput.log` , look at the hour and date to find the correct one or use the one without a number for the latest log.
+
+        You can drag and drop the log file here, or paste the relevant portions of the log (especially any errors or warnings related to MegabonkTogether).
+      placeholder: Paste your BepInEx logs here or drag and drop the log file.
+      render: shell
+    validations:
+      required: false
+
+  - type: input
+    id: game-version
+    attributes:
+      label: Game Version
+      description: What version of the game are you playing? Latest ?
+      placeholder: e.g., 1.2.3
+    validations:
+      required: false
+
+  - type: textarea
+    id: other-mods
+    attributes:
+      label: Other Mods Installed
+      description: List any other BepInEx mods you have installed (Note : there is a high risk they conflict).
+      placeholder: |
+        - ModName1 v1.0.0
+        - ModName2 v2.1.0
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context, screenshots, or information that might be helpful.
+    validations:
+      required: false

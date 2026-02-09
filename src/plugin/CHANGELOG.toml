@@ -1,0 +1,53 @@
+﻿# MegabonkTogether Changelog
+# Format:
+# [version."X.Y.Z"]
+# changes = [
+#     "Change 1 description",
+#     "Change 2 description",
+# ]
+
+[version."2.0.2"]
+changes = [
+    "Fixed item Ghost crashing : This was the main reason everyone was crashing. (Note: There might be other items causing issues, please report them if you find any at https://github.com/Fcornaire/megabonk-together/issues)",
+    "Added egg interaction support",
+    "Fixed client side Challenge shrines interactions not working properly"
+]
+
+[version."2.0.1"]
+changes = [
+    "Properly queue encounter reward: This should prevent missing rewards when multiples encounters (Level Up, Shrines, Chest,...) happen at the same time. This should also fix the random crash some people where having as i believe it's related to the same issue. Please open an issue at https://github.com/Fcornaire/megabonk-together/issues if you still encounter this problem with the crash logs as i'm having a hard time replicating it.",
+    "Added option to allow saving progression in netplay sessions. Use at your own risk",
+    "Properly track kills/money per player",
+    "Fixed disconnection issues preventing reconnection",
+    "Fixed (i hope) button selection reset issue in character window",
+    "Fixed projectile not despawning in singleplayer mode",
+    "Fixed some connection issues in relay mode for some users"
+]
+
+[version."2.0.0"]
+changes = [
+    "Added changelog system: See what's new after each update!",
+    "Implemented Friendlies: A private queue system. One host share a code and other join with it.",
+    "Added a new interactable, Reviver : When a player die, it will now spawn a Coffin. Other player have to defeat his ghost to respawn the dead player"
+]
+
+[version."1.3.0"]
+changes = [
+    "Thunderstore support: No auto update for thunderstore as they have to update throught the website or r2modman",
+    "Balance change: Reduced Credits earning to limit a bit spawned enemies"
+]
+
+[version."1.2.0"]
+changes = [
+    "Add latency indicator: The host see latency for all clients and client see latency to the host",
+]
+
+[version."1.1.0"]
+changes = [
+    "Generate updater on the fly",
+]
+
+[version."1.0.0"]
+changes = [
+    "Initial release ! Thanks for trying the mod"
+]

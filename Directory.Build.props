@@ -1,0 +1,5 @@
+<Project>
+  <PropertyGroup>
+    <MegabonkPath>/home/tutu/.local/share/Steam/steamapps/common/Megabonk</MegabonkPath>
+  </PropertyGroup>
+</Project>

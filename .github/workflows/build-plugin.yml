@@ -1,0 +1,141 @@
+name: Build MegabonkTogether Plugin
+
+on:
+  push:
+    tags:
+      - "*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: "6.0.x"
+
+      - name: Restore
+        run: dotnet restore src/plugin/MegabonkTogether.Plugin.csproj
+
+      - name: Build (Release)
+        run: dotnet build src/plugin/MegabonkTogether.Plugin.csproj --configuration Release --no-restore
+
+      - name: Set version from tag
+        id: set_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          VERSION=${VERSION#v}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "ARCHIVE_NAME=Megabonk-Together-${VERSION}.zip" >> $GITHUB_ENV
+
+      - name: Create zip of DLLs
+        run: |
+          OUTPUT_DIR="src/plugin/bin/Release/net6.0"
+          mkdir -p artifacts
+          ZIP="artifacts/${ARCHIVE_NAME}"
+
+          echo "Zipping DLLs, PDBs from $OUTPUT_DIR into $ZIP)"
+
+          shopt -s nullglob || true
+
+          FILES=()
+
+          for f in "$OUTPUT_DIR"/*.dll; do
+            [ -e "$f" ] && FILES+=("$f")
+          done
+
+          for f in "$OUTPUT_DIR"/*.pdb; do
+            [ -e "$f" ] && FILES+=("$f")
+          done
+
+          if [ ${#FILES[@]} -eq 0 ]; then
+            echo "No DLL, PDB files found to zip in $OUTPUT_DIR"
+            ls -la "$OUTPUT_DIR" || true
+            exit 1
+          fi
+
+          REPO_ROOT="$(pwd)"
+          TMPDIR=$(mktemp -d)
+          DESTDIR="$TMPDIR/MegabonkTogether"
+          mkdir -p "$DESTDIR"
+
+          for src in "${FILES[@]}"; do
+            cp "$src" "$DESTDIR/"
+          done
+
+          (cd "$TMPDIR" && zip -r "$REPO_ROOT/$ZIP" "MegabonkTogether")
+
+          rm -rf "$TMPDIR"
+
+          ls -la artifacts
+        env:
+          ARCHIVE_NAME: ${{ env.ARCHIVE_NAME }}
+
+      - name: Prepare release notes (diff from previous tag)
+        id: prepare_notes
+        run: |
+          git fetch --tags --prune
+
+          VERSION=${VERSION:-${GITHUB_REF#refs/tags/}}
+          VERSION=${VERSION#v}
+
+          PREV_TAG=$(git for-each-ref --sort=-creatordate --format '%(refname:short)' refs/tags | sed -n '2p' || true)
+
+          if [ -z "$PREV_TAG" ]; then
+            CHANGES=$(git log --pretty=format:'- %s (%h)')
+            {
+              echo "RELEASE_NOTES<<EOF"
+              echo "Initial release"
+              echo
+              echo "$CHANGES"
+              echo "EOF"
+            } >> "$GITHUB_ENV"
+          else
+            CHANGES=$(git log --pretty=format:'- %s (%h)' "${PREV_TAG}..HEAD")
+            {
+              echo "RELEASE_NOTES<<EOF"
+              echo "Changes since ${PREV_TAG}:"
+              echo
+              echo "$CHANGES"
+              echo "EOF"
+            } >> "$GITHUB_ENV"
+          fi
+        env:
+          VERSION: ${{ env.VERSION }}
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ env.VERSION }}
+          release_name: ${{ env.VERSION }}
+          body: ${{ env.RELEASE_NOTES }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload release asset (zip)
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: artifacts/${{ env.ARCHIVE_NAME }}
+          asset_name: ${{ env.ARCHIVE_NAME }}
+          asset_content_type: application/zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARCHIVE_NAME }}
+          path: artifacts/${{ env.ARCHIVE_NAME }}
