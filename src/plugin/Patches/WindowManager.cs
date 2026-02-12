@@ -2,6 +2,7 @@
 using HarmonyLib;
 using MegabonkTogether.Common;
 using MegabonkTogether.Common.Models;
+using MegabonkTogether.Configuration;
 using MegabonkTogether.Helpers;
 using MegabonkTogether.Patches.Enemies;
 using MegabonkTogether.Scripts.Button;
@@ -211,11 +212,21 @@ namespace MegabonkTogether.Patches
             textRectTransform.anchorMin = new Vector2(0f, 1f);
             textRectTransform.anchorMax = new Vector2(1f, 1f);
             textRectTransform.pivot = new Vector2(1f, 1f);
-            textRectTransform.anchoredPosition = new Vector2(0f, 0f);
-            textRectTransform.sizeDelta = new Vector2(0f, 80f);
+            textRectTransform.anchoredPosition = new Vector2(0f, 40f);
+            textRectTransform.sizeDelta = new Vector2(0f, 250f);
 
             var text = textObj.AddComponent<TextMeshProUGUI>();
             text.text = $"Role: {roleText}\nCode: ******";
+            var sharedExpValue = Plugin.Instance.Mode.Role == Role.Host ? ModConfig.EnabledSharedExperience.Value : Plugin.Instance.Mode.EnabledSharedExperience;
+            if (sharedExpValue.HasValue)
+            {
+                var sharedExpStatus = sharedExpValue.Value
+                ? "<color=green>ON</color>"
+                : "<color=red>OFF</color>";
+
+                text.text += $"\nShared Experience: {sharedExpStatus}";
+            }
+            text.enableWordWrapping = false;
             text.alignment = TextAlignmentOptions.TopLeft;
             text.fontSize = 36;
             text.color = Color.white;
@@ -272,6 +283,9 @@ namespace MegabonkTogether.Patches
             copyButtonRect.sizeDelta = new Vector2(200f, 40f);
 
             copyButtonObj.transform.SetAsLastSibling();
+
+            copyButton.state = MyButton.EButtonState.Active;
+            copyButton.RefreshState();
         }
 
         private static void OnCopyCodeClicked()

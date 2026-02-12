@@ -64,6 +64,9 @@ namespace MegabonkTogether.Services
         private static event Action<HatChanged> HatChangedEvents;
         private static event Action<SpawnedReviver> SpawnedReviverEvents;
         private static event Action<PlayerRespawned> PlayerRespawnedEvents;
+        private static event Action<AddXp> AddXpEvents;
+        private static event Action<CloseEncounter> CloseEncounterEvents;
+        private static event Action<GoldChanged> GoldChangedEvents;
 
         public static void OnSpawnedObject(SpawnedObject spawnedObject)
         {
@@ -763,11 +766,49 @@ namespace MegabonkTogether.Services
             PlayerRespawnedEvents += action;
         }
 
-        internal static void OnPlayerRespawned(PlayerRespawned playerRespawned)
+        public static void OnPlayerRespawned(PlayerRespawned playerRespawned)
         {
             MainThreadDispatcher.Enqueue(() =>
             {
                 PlayerRespawnedEvents?.Invoke(playerRespawned);
+            });
+        }
+
+        public static void SubscribeAddXpEvents(Action<AddXp> action)
+        {
+            AddXpEvents += action;
+        }
+
+        public static void OnAddXp(AddXp addXp)
+        {
+            MainThreadDispatcher.Enqueue(() =>
+            {
+                AddXpEvents?.Invoke(addXp);
+            });
+        }
+
+        public static void SubscribeCloseEncounterEvents(Action<CloseEncounter> action)
+        {
+            CloseEncounterEvents += action;
+        }
+
+        public static void OnCloseEncounter(CloseEncounter closeEncounter)
+        {
+            MainThreadDispatcher.Enqueue(() =>
+            {
+                CloseEncounterEvents?.Invoke(closeEncounter);
+            });
+        }
+
+        public static void SubscribeGoldChangedEvents(Action<GoldChanged> action)
+        {
+            GoldChangedEvents += action;
+        }
+        public static void OnGoldChanged(GoldChanged goldChanged)
+        {
+            MainThreadDispatcher.Enqueue(() =>
+            {
+                GoldChangedEvents?.Invoke(goldChanged);
             });
         }
     }

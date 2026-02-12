@@ -141,7 +141,11 @@ namespace MegabonkTogether.Services
             Plugin.Log.LogInfo($"[GameBalance] Credits Timer Multiplier: {creditsMultiplier:F2}x");
             Plugin.Log.LogInfo($"[GameBalance] Basic Enemy HP Base Multiplier: {enemyHpMultiplier:F2}x");
             Plugin.Log.LogInfo($"[GameBalance] Free Chest Spawn Rate Multiplier: {chestSpawnMultiplier:F2}x");
-            Plugin.Log.LogInfo($"[GameBalance] XP Value: {xpValue}");
+
+            if (Plugin.Instance.Mode.EnabledSharedExperience.HasValue && !Plugin.Instance.Mode.EnabledSharedExperience.Value)
+            {
+                Plugin.Log.LogInfo($"[GameBalance] XP Value: {xpValue}");
+            }
         }
 
         private DifficultyLevel GetDifficultyLevelByPlayers()

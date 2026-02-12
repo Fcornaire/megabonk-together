@@ -65,11 +65,14 @@ app.MapWhen(context => context.Request.Path.StartsWithSegments("/ws"), wsApp =>
 
             var query = context.Request.Query;
 
+            var enabledSharedExperience = bool.Parse(query["enabledSharedExperience"].ToString());
+
             if (query.ContainsKey("random"))
             {
                 await handler.HandleRandomClientAsync(webSocket,
                     context.Connection.RemoteIpAddress?.ToString(),
                     context.Connection.RemotePort,
+                    enabledSharedExperience,
                     cts.Token);
             }
             else if (query.ContainsKey("friendlies"))
@@ -84,6 +87,7 @@ app.MapWhen(context => context.Request.Path.StartsWithSegments("/ws"), wsApp =>
                     role,
                     code,
                     name,
+                    enabledSharedExperience,
                     cts.Token);
             }
             else

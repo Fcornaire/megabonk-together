@@ -15,8 +15,8 @@ namespace MegabonkTogether.Patches
         private static readonly IPickupManagerService pickupManagerService = Plugin.Services.GetService<IPickupManagerService>();
 
         /// <summary>
-        /// Apply pickup if owned by local player unless pickup is time or magnet.
-        /// Ignore on remote
+        /// Apply pickup if owned by local player unless pickup is time or magnet or if it's xp and shared experience is enabled
+        /// Ignore on remote on non shared experience
         /// </summary>
         [HarmonyPrefix]
         [HarmonyPatch(nameof(Pickup.ApplyPickup))]
@@ -42,6 +42,8 @@ namespace MegabonkTogether.Patches
                 if (isRemote)
                 {
                     __state = false;
+
+
                     return false;
                 }
             }

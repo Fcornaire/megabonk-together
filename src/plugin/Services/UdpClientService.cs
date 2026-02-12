@@ -43,7 +43,7 @@ namespace MegabonkTogether.Services
 
         public void Poll();
 
-        public Task<bool> HandleMatch(MatchInfo matchInfo, uint selfConnectionId, string rdvServerHost, uint rdvServerPort);
+        public Task<bool> HandleMatch(MatchInfo matchInfo, uint selfConnectionId, string rdvServerHost, uint rdvServerPort, bool enabledSharedExperience);
         public bool HasAllPeersConnected();
 
         public void SendToAllClients<T>(T data, DeliveryMethod deliveryMethod) where T : IGameNetworkMessage;
@@ -71,7 +71,14 @@ namespace MegabonkTogether.Services
         public void ResetHandledHost();
         public void RemovePeer(uint clientConnectionId);
     }
-    internal class UdpClientService : IUdpClientService
+    internal class UdpClientService(
+            IPlayerManagerService playerManagerService,
+            IEnemyManagerService enemyManagerService,
+            IProjectileManagerService projectileManagerService,
+            IFinalBossOrbManagerService finalBossOrbManagerService,
+            ISpawnedObjectManagerService spawnedObjectManagerService,
+            IEncounterService encounterService,
+            ManualLogSource logger) : IUdpClientService
     {
         private const int MAX_PACKET_SIZE_BYTES = 1000;
         private const int STARTING_GAME_UDP_PORT = 27015;
@@ -91,12 +98,6 @@ namespace MegabonkTogether.Services
         private bool isHandlingConnection = false;
         private bool hasHandledHost = false;
         private bool isGameOver = false;
-        private readonly IPlayerManagerService playerManagerService;
-        private readonly IEnemyManagerService enemyManagerService;
-        private readonly IProjectileManagerService projectileManagerService;
-        private readonly IFinalBossOrbManagerService finalBossOrbManagerService;
-        private readonly ISpawnedObjectManagerService spawnedObjectManagerService;
-        private readonly ManualLogSource logger;
 
         private string rdvServerHost;
         private int rdvServerPort;
@@ -110,22 +111,6 @@ namespace MegabonkTogether.Services
         private const int POLL_INTERVAL_MS = 5;
 
         private CancellationTokenSource pollingCancelationTokenSource;
-
-        public UdpClientService(
-            IPlayerManagerService playerManagerService,
-            IEnemyManagerService enemyManagerService,
-            IProjectileManagerService projectileManagerService,
-            IFinalBossOrbManagerService finalBossOrbManagerService,
-            ISpawnedObjectManagerService spawnedObjectManagerService,
-            ManualLogSource logger)
-        {
-            this.playerManagerService = playerManagerService;
-            this.enemyManagerService = enemyManagerService;
-            this.projectileManagerService = projectileManagerService;
-            this.finalBossOrbManagerService = finalBossOrbManagerService;
-            this.spawnedObjectManagerService = spawnedObjectManagerService;
-            this.logger = logger;
-        }
 
         public bool Initialize()
         {
@@ -730,6 +715,15 @@ namespace MegabonkTogether.Services
                     case PlayerDied playerDied:
                         EventManager.OnPlayerDied(playerDied);
                         break;
+                    case AddXp addXp:
+                        EventManager.OnAddXp(addXp);
+                        break;
+                    case CloseEncounter closeEncounter:
+                        EventManager.OnCloseEncounter(closeEncounter);
+                        break;
+                    case GoldChanged goldChanged:
+                        EventManager.OnGoldChanged(goldChanged);
+                        break;
                     default:
                         Plugin.Log.LogWarning($"Unknown message type received. message={message}");
                         break;
@@ -986,6 +980,28 @@ namespace MegabonkTogether.Services
                         SendToAllClients(playerDisconnected, DeliveryMethod.ReliableOrdered);
 
                         break;
+                    case AddXp addXp:
+                        EventManager.OnAddXp(addXp);
+                        SendToAllClientsExcept(netPeerId, addXp.OwnerId, addXp);
+                        break;
+                    case EncounterClosed encounterClosed:
+                        encounterService.AddClosedEncounterForPlayer(encounterClosed.OwnerId);
+
+                        if (encounterService.IsClosable())
+                        {
+                            IGameNetworkMessage closeMessage = new CloseEncounter
+                            {
+                            };
+
+                            SendToAllClients(closeMessage, DeliveryMethod.ReliableOrdered);
+                            EventManager.OnCloseEncounter(closeMessage as CloseEncounter);
+                        }
+
+                        break;
+                    case GoldChanged goldChanged:
+                        EventManager.OnGoldChanged(goldChanged);
+                        SendToAllClientsExcept(netPeerId, goldChanged.OwnerId, goldChanged);
+                        break;
                     default:
                         Plugin.Log.LogWarning($"Unknown message type received {message}");
                         break;
@@ -1066,7 +1082,7 @@ namespace MegabonkTogether.Services
             EventManager.OnFinalBossOrbsUpdate(lobbyUpdate.BossOrbs);
         }
 
-        public async Task<bool> HandleMatch(MatchInfo matchInfo, uint selfConnectionId, string rdvServerHost, uint rdvServerPort)
+        public async Task<bool> HandleMatch(MatchInfo matchInfo, uint selfConnectionId, string rdvServerHost, uint rdvServerPort, bool enabledSharedExperience)
         {
             if (hasHandledHost)
             {
@@ -1080,6 +1096,11 @@ namespace MegabonkTogether.Services
             if (!this.isHost.Value)
             {
                 hasHandledHost = true; //Prevent further host connection
+            }
+
+            if (!Plugin.Instance.Mode.EnabledSharedExperience.HasValue)
+            {
+                Plugin.Instance.Mode.EnabledSharedExperience = enabledSharedExperience;
             }
 
             var allPlayers = playerManagerService.GetAllPlayers();

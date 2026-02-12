@@ -29,5 +29,30 @@ namespace MegabonkTogether.Patches.Inventories
 
             return true;
         }
+
+        /// <summary>
+        /// Synchronize gold changes in shared experience mode.
+        /// </summary>
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(PlayerInventory.ChangeGold))]
+        public static void ChangeGold_Postfix(PlayerInventory __instance, int amount)
+        {
+            if (!synchronizationService.HasNetplaySessionStarted())
+            {
+                return;
+            }
+
+            if (!synchronizationService.IsSharedExperienceEnabled())
+            {
+                return;
+            }
+
+            if (!Plugin.CAN_SEND_MESSAGES)
+            {
+                return;
+            }
+
+            synchronizationService.OnChangeGold(amount, __instance.gold);
+        }
     }
 }

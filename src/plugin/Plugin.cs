@@ -151,6 +151,7 @@ namespace MegabonkTogether
                 services.AddSingleton<IGameBalanceService, GameBalanceService>();
                 services.AddSingleton<IAutoUpdaterService, AutoUpdaterService>();
                 services.AddSingleton<IChangelogService, ChangelogService>();
+                services.AddSingleton<IEncounterService, EncounterService>();
             });
 
             Host = builder.Build();

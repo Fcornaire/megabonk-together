@@ -10,5 +10,6 @@ namespace MegabonkTogether.Server.Models
         public string QueueId { get; set; } = "";
         public Role? Role { get; set; }
         public string Name { get; internal set; }
+        public bool EnabledSharedExperience { get; internal set; } = false;
     }
 }
