@@ -105,7 +105,7 @@ namespace MegabonkTogether.Patches.Enemies
         /// Same as above 
         /// </summary>
         [HarmonyPostfix]
-        [HarmonyPatch(nameof(Enemy.EnemyDied), [])]
+        [HarmonyPatch(nameof(Enemy.EnemyDied), new System.Type[0])]
         public static void EnemyDiedWithoutDc_Postfix(Enemy __instance)
         {
             if (!synchronizationService.HasNetplaySessionStarted())
