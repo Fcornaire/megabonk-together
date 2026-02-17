@@ -11,3 +11,4 @@ assembly-publicizer "%MegabonkPath%\BepInEx\interop\Il2CppSystem.dll" --strip-on
 assembly-publicizer "%MegabonkPath%\BepInEx\interop\Il2CppSystem.Core.dll" --strip-only -o ./stripped-libs/interop/Il2CppSystem.Core.dll
 assembly-publicizer "%MegabonkPath%\BepInEx\interop\Rewired_Core.dll" --strip-only -o ./stripped-libs/interop/Rewired_Core.dll
 assembly-publicizer "%MegabonkPath%\BepInEx\interop\Unity.Localization.dll" --strip-only -o ./stripped-libs/interop/Unity.Localization.dll
+assembly-publicizer "%MegabonkPath%\BepInEx\interop\Coffee.UIParticle.dll" --strip-only -o ./stripped-libs/interop/Coffee.UIParticle.dll

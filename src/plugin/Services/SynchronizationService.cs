@@ -125,6 +125,10 @@ namespace MegabonkTogether.Services
         public void OnHatChanged(EHat eHat);
         public void OnSkinSelected(SkinData skin);
         public void OnRespawn(uint ownerId, Vector3 position);
+        public bool IsSharedExperienceEnabled();
+        public void PlayerXpAddXp(int xp, int amount, float leftOverXp);
+        public void RewardFinished();
+        public void OnChangeGold(int amount, float gold);
     }
     internal class SynchronizationService : ISynchronizationService
     {
@@ -137,6 +141,7 @@ namespace MegabonkTogether.Services
         private readonly ISpawnedObjectManagerService spawnedObjectManagerService;
         private readonly IFinalBossOrbManagerService finalBossOrbManagerService;
         private readonly IGameBalanceService gameBalanceService;
+        private readonly IEncounterService encounterService;
         private readonly ManualLogSource logger;
         private readonly ConcurrentBag<SpawnedObject> toSpawns = [];
         private readonly ConcurrentBag<SpawnedObjectInCrypt> toUpdate = [];
@@ -161,7 +166,8 @@ namespace MegabonkTogether.Services
             IChestManagerService chestManagerService,
             ISpawnedObjectManagerService spawnedObjectManagerService,
             IFinalBossOrbManagerService finalBossOrbManagerService,
-            IGameBalanceService gameBalanceService
+            IGameBalanceService gameBalanceService,
+            IEncounterService encounterService
             )
         {
             this.playerManagerService = playerManagerService;
@@ -172,6 +178,7 @@ namespace MegabonkTogether.Services
             this.spawnedObjectManagerService = spawnedObjectManagerService;
             this.finalBossOrbManagerService = finalBossOrbManagerService;
             this.gameBalanceService = gameBalanceService;
+            this.encounterService = encounterService;
             this.logger = logger;
 
             EventManager.SubscribeSpawnedObjectsEvents(OnNewObjectToSpawn);
@@ -227,6 +234,9 @@ namespace MegabonkTogether.Services
             EventManager.SubscribeHatChangedEvents(OnReceivedHatChanged);
             EventManager.SubscribeSpawnedReviverEvents(OnReceivedSpawnedReviver);
             EventManager.SubscribePlayerRespawnedEvents(OnReceivedPlayerRespawned);
+            EventManager.SubscribeAddXpEvents(OnReceivedAddXp);
+            EventManager.SubscribeCloseEncounterEvents(OnReceivedCloseEncounter);
+            EventManager.SubscribeGoldChangedEvents(OnReceivedChangeGold);
 
             cancellationToken = cancellationTokenSource.Token;
             this.udpClientService = udpClientService;
@@ -1602,7 +1612,7 @@ namespace MegabonkTogether.Services
                 return;
             }
 
-            if (ePickup == EPickup.Xp)
+            if (ePickup == EPickup.Xp && !IsSharedExperienceEnabled())
             {
                 pickup.value = gameBalanceService.GetPickupXpValue();
             }
@@ -1630,10 +1640,11 @@ namespace MegabonkTogether.Services
             var spawnedPickup = PickupManager.Instance.SpawnPickup((EPickup)pickup.Pickup, pickup.Position.ToUnityVector3(), pickup.Value, false);
             Plugin.CAN_SPAWN_PICKUPS = false;
 
-            if (spawnedPickup.ePickup == EPickup.Xp)
-            {
-                spawnedPickup.value = gameBalanceService.GetPickupXpValue();
-            }
+            //if (spawnedPickup.ePickup == EPickup.Xp && !IsSharedExperienceEnabled())
+            //{
+            //    spawnedPickup.value = gameBalanceService.GetPickupXpValue();
+            //}
+
 
             var dynP = DynamicData.For(spawnedPickup);
             dynP.Data.Clear();
@@ -1707,6 +1718,14 @@ namespace MegabonkTogether.Services
                 pickup.ApplyPickup();
                 Plugin.CAN_SEND_MESSAGES = true;
             }
+            //else if (pickup.ePickup == EPickup.Xp && IsSharedExperienceEnabled()) //Apply xp pickup for all clients if shared xp enabled
+            //{
+            //    Plugin.CAN_SEND_MESSAGES = false;
+            //    pickup.ApplyPickup();
+            //    Plugin.CAN_SEND_MESSAGES = true;
+
+            //    logger.LogInfo($"received Current player XP : {MyPlayer.Instance.inventory.playerXp.GetXpInt()} , Pending XP : {MyPlayer.Instance.inventory.pendingXp}");
+            //}
             else
             {
                 var isServer = IsServerMode() ?? false;
@@ -1937,6 +1956,11 @@ namespace MegabonkTogether.Services
                 return;
             }
 
+            if (IsSharedExperienceEnabled())
+            {
+                UiManager.Instance.encounterWindows.AddEncounter(Assets.Scripts.UI.InGame.Rewards.EEncounter.ChestNormal);
+            }
+
             GameObject.DestroyImmediate(chestObject);
             chestManagerService.RemoveChest(opened.ChestId);
         }
@@ -2021,6 +2045,12 @@ namespace MegabonkTogether.Services
                 });
             }
 
+            if (tomeData.eTome == ETome.Xp)
+            {
+                var xpMult = GameManager.Instance.player.inventory.playerStats.GetStat(EStat.XpIncreaseMultiplier);
+                logger.LogInfo($"Adding tome {tomeData.eTome} , current player XP : {xpMult}");
+            }
+
             IGameNetworkMessage msg = new TomeAdded
             {
                 Tome = (int)tomeData.eTome,
@@ -2062,8 +2092,22 @@ namespace MegabonkTogether.Services
                     upgradeModifiers.Add(modifier);
                 }
                 Plugin.CAN_SEND_MESSAGES = false;
+
+                var callbacks = TomeInventory.A_TomeUpgrade;
+                TomeInventory.A_TomeUpgrade = null;
                 player.Inventory.tomeInventory.AddTome(tomeData, upgradeModifiers, (ERarity)added.Rarity);
                 player.RefreshConstantAttack(upgradeModifiers);
+                TomeInventory.A_TomeUpgrade = callbacks;
+
+                if (IsSharedExperienceEnabled() && (ETome)added.Tome == ETome.Xp)
+                {
+                    var xpMult = GameManager.Instance.player.inventory.playerStats.GetStat(EStat.XpIncreaseMultiplier);
+                    logger.LogInfo($"Added XP for player, current player XP : {xpMult}");
+
+                    //logger.LogWarning("KEEPING SAME XP %");
+                    //GameManager.Instance.player.inventory.tomeInventory.AddTome(tomeData, upgradeModifiers, (ERarity)added.Rarity);
+                }
+
                 Plugin.CAN_SEND_MESSAGES = true;
             }
         }
@@ -2123,6 +2167,24 @@ namespace MegabonkTogether.Services
                     {
                         netplayId = egg;
                     }
+
+                    var shadyGuy = spawnedObjectManagerService.GetByReferenceInChildren<InteractableShadyGuy>(instance.gameObject);
+                    if (shadyGuy.HasValue)
+                    {
+                        netplayId = shadyGuy;
+                    }
+
+                    var moai = spawnedObjectManagerService.GetByReferenceInChildren<InteractableShrineMoai>(instance.gameObject);
+                    if (moai.HasValue)
+                    {
+                        netplayId = moai;
+                    }
+
+                    var microwave = spawnedObjectManagerService.GetByReferenceInChildren<InteractableMicrowave>(instance.gameObject);
+                    if (microwave.HasValue)
+                    {
+                        netplayId = microwave;
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -2157,11 +2219,12 @@ namespace MegabonkTogether.Services
             IGameNetworkMessage message = new InteractableUsed
             {
                 NetplayId = netplayId.HasValue ? netplayId.Value : 0,
-                Action = GetActionByInteractable(instance),
+                Action = IsSharedExperienceEnabled() ? InteractableAction.Interact : GetActionByInteractable(instance),
                 IsPortal = isPortal,
                 IsFinalPortal = isFinalPortal,
                 IsCryptKey = isCryptKey,
-                OwnerId = playerManagerService.GetLocalPlayer().ConnectionId
+                OwnerId = playerManagerService.GetLocalPlayer().ConnectionId,
+                IsMicrowaveAndHaveItem = instance.GetComponentInChildren<InteractableMicrowave>()?.hasItem ?? false
             };
 
             var isHost = IsServerMode() ?? false;
@@ -2301,7 +2364,17 @@ namespace MegabonkTogether.Services
 
             if (interactableObj == null)
             {
-                logger.LogWarning("Interactable object not found in SpawnedObjectManagerService when processing OnReceivedInteractableUsed.");
+                if (IsSharedExperienceEnabled())
+                {
+                    MyTime.Pause();
+                    ScreenTextHelper.Show("Waiting for other player(s) choices...", new Vector2(0, -350));
+                    RewardFinished();
+                }
+                else
+                {
+                    logger.LogWarning("Interactable object not found in SpawnedObjectManagerService when processing OnReceivedInteractableUsed.");
+                }
+
                 return;
             }
 
@@ -2317,6 +2390,103 @@ namespace MegabonkTogether.Services
                     logger.LogInfo($"Net player used interactable with ID: {used.NetplayId}");
                     break;
                 case InteractableAction.Interact:
+                    var microwave = interactableObj.GetComponentInChildren<InteractableMicrowave>();
+                    if (microwave != null)
+                    {
+
+                        if (used.IsMicrowaveAndHaveItem && !microwave.hasItem)
+                        {
+                            break;
+                        }
+
+                        if (microwave.hasItem && !used.IsMicrowaveAndHaveItem)
+                        {
+                            microwave.Interact();
+                            MyTime.Pause();
+                            RewardFinished();
+                            ScreenTextHelper.Show("Waiting for other player(s) choices in Microwave...", new Vector2(0, -350));
+                            break;
+                        }
+
+                        var uniqueItemsInRarity = GameManager.Instance.player.inventory.itemInventory.GetUniqueItemsInRarity(microwave.rarity);
+
+                        if (!microwave.hasItem && (GameManager.Instance.player.IsDead() || !microwave.CanInteract() || uniqueItemsInRarity < 2))
+                        {
+                            MyTime.Pause();
+                            RewardFinished();
+                            ScreenTextHelper.Show("Waiting for other player(s) choices in Microwave...", new Vector2(0, -350));
+                        }
+                        else
+                        {
+                            microwave.Interact();
+                        }
+                        break;
+                    }
+
+                    var shrineBalance = interactableObj.GetComponentInChildren<InteractableShrineBalance>();
+                    if (shrineBalance != null)
+                    {
+                        if (GameManager.Instance.player.IsDead())
+                        {
+                            MyTime.Pause();
+                            RewardFinished();
+                            ScreenTextHelper.Show("Waiting for other player(s) choices in Balance Shrine...", new Vector2(0, -350));
+                        }
+                        else
+                        {
+                            shrineBalance.Interact();
+                        }
+                        break;
+                    }
+
+                    var moai = interactableObj.GetComponentInChildren<InteractableShrineMoai>();
+                    if (moai != null)
+                    {
+                        if (GameManager.Instance.player.IsDead())
+                        {
+                            MyTime.Pause();
+                            RewardFinished();
+                            ScreenTextHelper.Show("Waiting for other player(s) choices in Moai Shrine...", new Vector2(0, -350));
+                        }
+                        else
+                        {
+                            moai.Interact();
+                        }
+                        break;
+                    }
+
+                    var chest = interactableObj.GetComponent<InteractableChest>();
+                    if (chest != null)
+                    {
+                        if (GameManager.Instance.player.IsDead())
+                        {
+                            MyTime.Pause();
+                            RewardFinished();
+                            ScreenTextHelper.Show("Waiting for other player(s) choices in Chest...", new Vector2(0, -350));
+                        }
+                        else
+                        {
+                            chest.Interact();
+                        }
+                        break;
+                    }
+
+                    var shadyGuy = interactableObj.GetComponentInChildren<InteractableShadyGuy>();
+                    if (shadyGuy != null)
+                    {
+                        if (GameManager.Instance.player.IsDead())
+                        {
+                            MyTime.Pause();
+                            RewardFinished();
+                            ScreenTextHelper.Show("Waiting for other player(s) choices with Shady Guy...", new Vector2(0, -350));
+                        }
+                        else
+                        {
+                            shadyGuy.Interact();
+                        }
+                        break;
+                    }
+
                     var shrineCursed = interactableObj.GetComponent<InteractableShrineCursed>();
                     if (shrineCursed != null)
                     {
@@ -4089,6 +4259,125 @@ namespace MegabonkTogether.Services
 
                 GameManager.Instance.player.playerRenderer.gameObject.SetActive(true);
             }
+        }
+
+        public bool IsSharedExperienceEnabled()
+        {
+            var sharedExperienceEnabled = Plugin.Instance.Mode.EnabledSharedExperience;
+            if (sharedExperienceEnabled.HasValue)
+            {
+                return sharedExperienceEnabled.Value;
+            }
+
+            return false;
+        }
+
+        public void PlayerXpAddXp(int xp, int amount, float leftOverXp)
+        {
+            IGameNetworkMessage message = new AddXp
+            {
+                Xp = xp,
+                Amount = amount,
+                LeftOverXp = leftOverXp,
+                OwnerId = playerManagerService.GetLocalPlayer().ConnectionId,
+            };
+
+            var isHost = IsServerMode() ?? false;
+            if (isHost)
+            {
+                udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
+            }
+            else
+            {
+                udpClientService.SendToHost(message);
+
+            }
+        }
+
+        private void OnReceivedAddXp(AddXp xp)
+        {
+            Plugin.CAN_SEND_MESSAGES = false;
+            var playerXp = GameManager.Instance.player.inventory.playerXp;
+            playerXp.xp = xp.Xp;
+            playerXp.leftOverXp = xp.LeftOverXp;
+            playerXp.AddXp(0);
+            Plugin.CAN_SEND_MESSAGES = true;
+        }
+
+        public void RewardFinished()
+        {
+            IGameNetworkMessage message = new EncounterClosed
+            {
+                OwnerId = playerManagerService.GetLocalPlayer().ConnectionId,
+            };
+
+            var isHost = IsServerMode() ?? false;
+            if (isHost)
+            {
+                encounterService.AddClosedEncounterForPlayer(playerManagerService.GetLocalPlayer().ConnectionId);
+
+                if (encounterService.IsClosable())
+                {
+                    IGameNetworkMessage closeMessage = new CloseEncounter
+                    {
+                    };
+
+                    udpClientService.SendToAllClients(closeMessage, LiteNetLib.DeliveryMethod.ReliableOrdered);
+                    OnCloseEncounter();
+                }
+            }
+            else
+            {
+                udpClientService.SendToHost(message);
+            }
+        }
+
+        private void OnReceivedCloseEncounter(CloseEncounter close)
+        {
+            encounterService.Close();
+            OnCloseEncounter();
+        }
+
+        private void OnCloseEncounter()
+        {
+            if (UiManager.Instance.encounterWindows.encounterInProgress)
+            {
+                UiManager.Instance.encounterWindows.RewardFinished();
+            }
+            else
+            {
+                encounterService.ClearClosedEncounters();
+                MyTime.Unpause();
+            }
+            //EncounterWindows.A_WindowClosed.Invoke();
+        }
+
+        public void OnChangeGold(int amount, float gold)
+        {
+            IGameNetworkMessage message = new GoldChanged
+            {
+                Amount = amount,
+                OwnerId = playerManagerService.GetLocalPlayer().ConnectionId,
+                Gold = gold <= 0 ? 0 : gold
+            };
+
+            var isHost = IsServerMode() ?? false;
+            if (isHost)
+            {
+                udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
+            }
+            else
+            {
+                udpClientService.SendToHost(message);
+            }
+        }
+
+        private void OnReceivedChangeGold(GoldChanged changed)
+        {
+            Plugin.CAN_SEND_MESSAGES = false;
+            GameManager.Instance.player.inventory.gold = changed.Gold;
+            GameManager.Instance.player.inventory.ChangeGold(0);
+            Plugin.CAN_SEND_MESSAGES = true;
         }
     }
 }

@@ -17,6 +17,6 @@
         public NetworkModeType Mode { get; set; }
         public Role Role { get; set; }
         public string RoomCode { get; set; } = "";
-
+        public bool? EnabledSharedExperience { get; set; } = null;
     }
 }

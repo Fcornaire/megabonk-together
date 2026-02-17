@@ -67,7 +67,8 @@ namespace MegabonkTogether.Services
 
         private async Task ConnectRandomAsync(string serverUrl, uint rdvServerPort, NetworkHandler networkHandler)
         {
-            var uri = new System.Uri($"{serverUrl}/ws?random");
+            var enabledSharedExperience = ModConfig.EnabledSharedExperience.Value;
+            var uri = new System.Uri($"{serverUrl}/ws?random&enabledSharedExperience={enabledSharedExperience}");
 
             await ws.ConnectAsync(uri, token);
             networkHandler.OnConnectedToMatchMaker();
@@ -105,7 +106,7 @@ namespace MegabonkTogether.Services
             var serverUri = new Uri(serverUrl);
             var hostOnly = serverUri.Host;
 
-            var hasFoundMatch = await udpClientService.HandleMatch(matchInfo, connectionId, hostOnly, rdvServerPort);
+            var hasFoundMatch = await udpClientService.HandleMatch(matchInfo, connectionId, hostOnly, rdvServerPort, matchInfo.EnabledSharedExperience);
 
             Plugin.Instance.NetworkHandler.OnMatchFound(hasFoundMatch);
         }
@@ -114,7 +115,8 @@ namespace MegabonkTogether.Services
         {
             var role = Plugin.Instance.Mode.Role;
             var code = Plugin.Instance.Mode.RoomCode;
-            var uri = new System.Uri($"{serverUrl}/ws?friendlies&role={role}&code={code}&name={ModConfig.PlayerName.Value}");
+            var enabledSharedExperience = ModConfig.EnabledSharedExperience.Value;
+            var uri = new System.Uri($"{serverUrl}/ws?friendlies&role={role}&code={code}&name={ModConfig.PlayerName.Value}&enabledSharedExperience={enabledSharedExperience}");
 
             await ws.ConnectAsync(uri, token);
             networkHandler.OnConnectedToMatchMaker();
@@ -235,7 +237,7 @@ namespace MegabonkTogether.Services
             var serverUri = new Uri(currentServerUrl);
             var hostOnly = serverUri.Host;
 
-            var hasFoundMatch = await udpClientService.HandleMatch(matchInfo, connectionId, hostOnly, currentRdvServerPort);
+            var hasFoundMatch = await udpClientService.HandleMatch(matchInfo, connectionId, hostOnly, currentRdvServerPort, matchInfo.EnabledSharedExperience);
 
             Plugin.Log.LogInfo($"HandleMatchInfo result : {hasFoundMatch}");
             Plugin.Instance.NetworkHandler.OnMatchFound(hasFoundMatch);

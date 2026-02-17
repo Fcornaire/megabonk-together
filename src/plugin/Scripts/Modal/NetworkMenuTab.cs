@@ -37,6 +37,14 @@ namespace MegabonkTogether.Scripts
         private CustomButton saveToggleRightButton;
         private TextMeshProUGUI saveToggleStatusText;
 
+        private CustomButton netplayOptionsButton;
+        private GameObject netplayOptionsTitle;
+        private CustomButton netplayOptionsBackButton;
+        private GameObject sharedExpToggleSetting;
+        private CustomButton sharedExpToggleLeftButton;
+        private CustomButton sharedExpToggleRightButton;
+        private TextMeshProUGUI sharedExpToggleStatusText;
+
         protected void Awake()
         {
             filter = new ProfanityFilter.ProfanityFilter();
@@ -51,10 +59,10 @@ namespace MegabonkTogether.Scripts
         {
             CreateCloseButton();
             CreatePlayerNameInput();
-            CreateSaveToggle();
             CreateMatchButtons();
             CreateStopButton();
             CreateFriendliesUI();
+            CreateNetplayOptionsUI();
         }
 
         private void CreateCloseButton()
@@ -155,7 +163,7 @@ namespace MegabonkTogether.Scripts
             rectTransform.anchorMin = new Vector2(0.5f, 0.6f);
             rectTransform.anchorMax = new Vector2(0.5f, 0.6f);
             rectTransform.pivot = new Vector2(0.5f, 0.5f);
-            rectTransform.anchoredPosition = new Vector2(0, -25);
+            rectTransform.anchoredPosition = new Vector2(0, 25);
             rectTransform.sizeDelta = new Vector2(700, 60);
 
             var textComponents = Il2CppFindHelper.RuntimeGetComponentsInChildren<TextMeshProUGUI>(saveToggleSetting);
@@ -205,6 +213,8 @@ namespace MegabonkTogether.Scripts
                     saveToggleRightButton.SetOnClickAction(OnSaveToggleRightClicked);
                 }
             }
+
+            saveToggleSetting.SetActive(false);
         }
 
         private void OnSaveToggleLeftClicked()
@@ -233,6 +243,160 @@ namespace MegabonkTogether.Scripts
                 saveToggleStatusText.text = ModConfig.AllowSavesDuringNetplay.Value ? "ON" : "OFF";
                 saveToggleStatusText.color = ModConfig.AllowSavesDuringNetplay.Value ? Color.green : Color.red;
             }
+        }
+
+        private void CreateSharedExpToggle()
+        {
+            var settings = mainMenu.settings.GetComponent<Settings>();
+            var settingPrefab = settings.GetSettingPrefab(SettingType.Enum);
+
+            sharedExpToggleSetting = GameObject.Instantiate(settingPrefab, panel.transform);
+
+            var rectTransform = sharedExpToggleSetting.GetComponent<RectTransform>();
+            rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+            rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            rectTransform.anchoredPosition = new Vector2(0, -50);
+            rectTransform.sizeDelta = new Vector2(700, 60);
+
+            var textComponents = Il2CppFindHelper.RuntimeGetComponentsInChildren<TextMeshProUGUI>(sharedExpToggleSetting);
+            foreach (var textComp in textComponents)
+            {
+                if (textComp.name.StartsWith("Text"))
+                {
+                    textComp.text = "Shared Experience(Experimental)\nXP/Gold/Interaction shared\nActive pause enabled";
+                    textComp.fontSize = 18;
+                    textComp.enableWordWrapping = false;
+                }
+                else if (textComp.name.StartsWith("StatusText"))
+                {
+                    sharedExpToggleStatusText = textComp;
+                    sharedExpToggleStatusText.gameObject.SetActive(true);
+                    UpdateSharedExpToggleStatus();
+                }
+            }
+
+            var buttons = Il2CppFindHelper.RuntimeGetComponentsInChildren<UnityEngine.UI.Button>(sharedExpToggleSetting);
+            foreach (var btn in buttons)
+            {
+                if (btn.name == "B_Left")
+                {
+                    var origButton = btn.GetComponent<MyButtonNormal>();
+                    if (origButton != null)
+                    {
+                        UnityEngine.Object.DestroyImmediate(origButton);
+                    }
+
+                    btn.onClick = new();
+
+                    sharedExpToggleLeftButton = btn.gameObject.AddComponent<CustomButton>();
+                    sharedExpToggleLeftButton.SetOnClickAction(OnSharedExpToggleLeftClicked);
+                }
+                else if (btn.name == "B_Right")
+                {
+                    var origButton = btn.GetComponent<MyButtonNormal>();
+                    if (origButton != null)
+                    {
+                        UnityEngine.Object.DestroyImmediate(origButton);
+                    }
+
+                    btn.onClick = new();
+
+                    sharedExpToggleRightButton = btn.gameObject.AddComponent<CustomButton>();
+                    sharedExpToggleRightButton.SetOnClickAction(OnSharedExpToggleRightClicked);
+                }
+            }
+
+            sharedExpToggleSetting.SetActive(false);
+        }
+
+        private void OnSharedExpToggleLeftClicked()
+        {
+            AudioManager.Instance.PlaySfx(AudioManager.Instance.uiClick.sounds[0]);
+            ToggleSharedExpOption(false);
+        }
+
+        private void OnSharedExpToggleRightClicked()
+        {
+            AudioManager.Instance.PlaySfx(AudioManager.Instance.uiClick.sounds[0]);
+            ToggleSharedExpOption(true);
+        }
+
+        private void ToggleSharedExpOption(bool isEnabled)
+        {
+            ModConfig.EnabledSharedExperience.Value = isEnabled;
+            ModConfig.Save();
+            UpdateSharedExpToggleStatus();
+        }
+
+        private void UpdateSharedExpToggleStatus()
+        {
+            if (sharedExpToggleStatusText != null)
+            {
+                sharedExpToggleStatusText.text = ModConfig.EnabledSharedExperience.Value ? "ON" : "OFF";
+                sharedExpToggleStatusText.color = ModConfig.EnabledSharedExperience.Value ? Color.green : Color.red;
+            }
+        }
+
+        private void CreateNetplayOptionsUI()
+        {
+            netplayOptionsTitle = new GameObject("NetplayOptionsTitle");
+            netplayOptionsTitle.transform.SetParent(panel.transform, false);
+
+            var titleRect = netplayOptionsTitle.AddComponent<RectTransform>();
+            titleRect.anchorMin = new Vector2(0.5f, 0.85f);
+            titleRect.anchorMax = new Vector2(0.5f, 0.85f);
+            titleRect.pivot = new Vector2(0.5f, 0.5f);
+            titleRect.anchoredPosition = Vector2.zero;
+            titleRect.sizeDelta = new Vector2(400, 60);
+
+            var titleText = netplayOptionsTitle.AddComponent<TextMeshProUGUI>();
+            titleText.text = "Netplay Options";
+            titleText.alignment = TextAlignmentOptions.Center;
+            titleText.fontSize = 60;
+            titleText.color = Color.white;
+
+            netplayOptionsTitle.SetActive(false);
+
+            CreateSaveToggle();
+            CreateSharedExpToggle();
+
+            var backButtonObj = GameObject.Instantiate(mainMenu.btnPlay.gameObject);
+            backButtonObj.transform.SetParent(panel.transform, false);
+
+            var originalBackButton = backButtonObj.GetComponent<MyButtonNormal>();
+            if (originalBackButton != null)
+            {
+                UnityEngine.Object.DestroyImmediate(originalBackButton);
+            }
+
+            UnityEngine.UI.Button backButton = backButtonObj.GetComponentInChildren<UnityEngine.UI.Button>();
+            if (backButton != null)
+            {
+                backButton.onClick = new();
+            }
+
+            var localizeStringEventBack = backButtonObj.GetComponentInChildren<LocalizeStringEvent>();
+            if (localizeStringEventBack != null)
+            {
+                UnityEngine.Object.DestroyImmediate(localizeStringEventBack);
+            }
+
+            netplayOptionsBackButton = backButtonObj.AddComponent<CustomButton>();
+            netplayOptionsBackButton.SetOnClickAction(OnNetplayOptionsBackClicked);
+
+            var backTextWrapper = backButtonObj.GetComponent<ButtonTextWrapper>();
+            backTextWrapper.t_text.text = "Back";
+            backTextWrapper.t_text.fontSize = 36;
+
+            var backRectTransform = backButtonObj.GetComponent<RectTransform>();
+            backRectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+            backRectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            backRectTransform.pivot = new Vector2(0.5f, 0.5f);
+            backRectTransform.anchoredPosition = new Vector2(0, -200f);
+            backRectTransform.sizeDelta = new Vector2(300, 70);
+
+            netplayOptionsBackButton.gameObject.SetActive(false);
         }
 
         private TextMeshProUGUI CreateInputText(GameObject parent)
@@ -311,7 +475,7 @@ namespace MegabonkTogether.Scripts
             rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
             rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
             rectTransform.pivot = new Vector2(0.5f, 0.5f);
-            rectTransform.anchoredPosition = new Vector2(0, -175f);
+            rectTransform.anchoredPosition = new Vector2(0, -220f);
             rectTransform.sizeDelta = new Vector2(300, 70);
 
             stopButton.gameObject.SetActive(false);
@@ -388,6 +552,41 @@ namespace MegabonkTogether.Scripts
             friendliesRectTransform.pivot = new Vector2(0.5f, 0.5f);
             friendliesRectTransform.anchoredPosition = new Vector2(180f, -100f);
             friendliesRectTransform.sizeDelta = new Vector2(300, 70);
+
+            var optionsButtonObj = GameObject.Instantiate(mainMenu.btnPlay.gameObject);
+            optionsButtonObj.transform.SetParent(panel.transform, false);
+
+            var originalOptionsButton = optionsButtonObj.GetComponent<MyButtonNormal>();
+            if (originalOptionsButton != null)
+            {
+                UnityEngine.Object.DestroyImmediate(originalOptionsButton);
+            }
+
+            UnityEngine.UI.Button optBtn = optionsButtonObj.GetComponentInChildren<UnityEngine.UI.Button>();
+            if (optBtn != null)
+            {
+                optBtn.onClick = new();
+            }
+
+            var localizeStringEventOptions = optionsButtonObj.GetComponentInChildren<LocalizeStringEvent>();
+            if (localizeStringEventOptions != null)
+            {
+                UnityEngine.Object.DestroyImmediate(localizeStringEventOptions);
+            }
+
+            netplayOptionsButton = optionsButtonObj.AddComponent<CustomButton>();
+            netplayOptionsButton.SetOnClickAction(OnNetplayOptionsClicked);
+
+            var optionsTextWrapper = optionsButtonObj.GetComponent<ButtonTextWrapper>();
+            optionsTextWrapper.t_text.text = "Netplay Options";
+            optionsTextWrapper.t_text.fontSize = 30;
+
+            var optionsRectTransform = optionsButtonObj.GetComponent<RectTransform>();
+            optionsRectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+            optionsRectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            optionsRectTransform.pivot = new Vector2(0.5f, 0.5f);
+            optionsRectTransform.anchoredPosition = new Vector2(0, -10f);
+            optionsRectTransform.sizeDelta = new Vector2(300, 70);
         }
 
         private void CreateFriendliesUI()
@@ -729,6 +928,22 @@ namespace MegabonkTogether.Scripts
             UpdateModalContents(true);
         }
 
+        private void OnNetplayOptionsClicked()
+        {
+            AudioManager.Instance.PlaySfx(AudioManager.Instance.uiSelect.sounds[0]);
+
+            UpdateModalContents(false);
+            UpdateNetplayOptionsUI(true);
+        }
+
+        private void OnNetplayOptionsBackClicked()
+        {
+            AudioManager.Instance.PlaySfx(AudioManager.Instance.uiSelect.sounds[0]);
+
+            UpdateNetplayOptionsUI(false);
+            UpdateModalContents(true);
+        }
+
         private void OnStopClicked()
         {
             AudioManager.Instance.PlaySfx(AudioManager.Instance.uiSelect.sounds[0]);
@@ -755,10 +970,10 @@ namespace MegabonkTogether.Scripts
         {
             randomButton.gameObject.SetActive(isVisible);
             friendliesButton.gameObject.SetActive(isVisible);
+            netplayOptionsButton.gameObject.SetActive(isVisible);
             closeButton.gameObject.SetActive(isVisible);
             playerNameInput.gameObject.SetActive(isVisible);
             label.SetActive(isVisible);
-            saveToggleSetting.SetActive(isVisible);
         }
 
         private void UpdateFriendliesUI(bool isVisible)
@@ -769,6 +984,14 @@ namespace MegabonkTogether.Scripts
             codeInput.gameObject.SetActive(isVisible);
             joinButton.gameObject.SetActive(isVisible);
             friendliesBackButton.gameObject.SetActive(isVisible);
+        }
+
+        private void UpdateNetplayOptionsUI(bool isVisible)
+        {
+            netplayOptionsTitle.SetActive(isVisible);
+            saveToggleSetting.SetActive(isVisible);
+            sharedExpToggleSetting.SetActive(isVisible);
+            netplayOptionsBackButton.gameObject.SetActive(isVisible);
         }
 
         private IEnumerator HandleConnectionStatus()
@@ -801,7 +1024,10 @@ namespace MegabonkTogether.Scripts
             }
 
             AudioManager.Instance.PlaySfx(AudioManager.Instance.uiSelect.sounds[0]);
-            SetStatusText("Waiting for a match...");
+            var sharedExpStatus = ModConfig.EnabledSharedExperience.Value
+                ? "<color=green>ON</color>"
+                : "<color=red>OFF</color>";
+            SetStatusText($"Waiting for a match... \n (You can only match people with shared experience {sharedExpStatus})");
 
             while (!Plugin.Instance.NetworkHandler.HasFoundMatch.HasValue)
             {

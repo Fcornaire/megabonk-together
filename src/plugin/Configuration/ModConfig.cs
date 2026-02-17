@@ -15,6 +15,7 @@ namespace MegabonkTogether.Configuration
         public static ConfigEntry<bool> ShowChangelog { get; private set; }
         public static ConfigEntry<string> PreviousVersion { get; private set; }
         public static ConfigEntry<bool> AllowSavesDuringNetplay { get; private set; }
+        public static ConfigEntry<bool> EnabledSharedExperience { get; private set; }
 
         public static void Initialize(ConfigFile config)
         {
@@ -61,6 +62,12 @@ namespace MegabonkTogether.Configuration
                 "AllowSavesDuringNetplay",
                 false,
                 "Allow game saves during netplay sessions."
+            );
+            EnabledSharedExperience = config.Bind(
+                "Gameplay",
+                "EnabledSharedExperience",
+                false,
+                "Enable Host experience (Same XP and pause enabled). Disable for no pause and separate XP."
             );
         }
 

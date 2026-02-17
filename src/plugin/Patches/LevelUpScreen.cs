@@ -16,7 +16,7 @@ namespace MegabonkTogether.Patches
         private static TMPro.TextMeshProUGUI infoText;
 
         /// <summary>
-        /// Unpause timeStep (To prevent pause) and let the player breath for 5 seconds.
+        /// Unpause timeStep (To prevent pause) and let the player breath for 5 seconds on shared experience only
         /// Unless interacting with a shady guy
         /// </summary>
 
@@ -25,6 +25,11 @@ namespace MegabonkTogether.Patches
         public static void ShowLevelupScreen_Postfix(LevelupScreen __instance)
         {
             if (!synchronizationService.HasNetplaySessionStarted())
+            {
+                return;
+            }
+
+            if (synchronizationService.IsSharedExperienceEnabled())
             {
                 return;
             }
@@ -70,7 +75,7 @@ namespace MegabonkTogether.Patches
         }
 
         /// <summary>
-        /// Add again 0.3 second of invulnerability after closing the level up screen (unless interacting with shady guy)
+        /// Add again 1 second of invulnerability after closing the level up screen (unless interacting with shady guy)
         /// </summary>
         [HarmonyPostfix]
         [HarmonyPatch(nameof(LevelupScreen.OnClose))]
@@ -99,7 +104,7 @@ namespace MegabonkTogether.Patches
 
             if (CurrentRoutine == null)
             {
-                Plugin.Log.LogInfo("No active invulnerability routine, skipping.");
+                Plugin.Log.LogDebug("No active invulnerability routine, skipping.");
                 return;
             }
 
@@ -129,7 +134,7 @@ namespace MegabonkTogether.Patches
             infoText.fontSize = 36;
             infoText.color = Color.white;
 
-            float timer = 0.3f;
+            float timer = 1.0f;
             while (timer > 0f)
             {
                 int seconds = Mathf.FloorToInt(timer);

@@ -43,6 +43,11 @@ More info at [Notable Network Changes](./NETPLAY_CHANGES.md)
 <details>
 <summary>📋 Click to view full changelog</summary>
 
+### v4.0.0
+
+- ✨ **Added Shared Experience mode (Experimental!)**: Shared XP, Gold and interactions across all players. This also implies an active pause on every interaction. The original mode is still available
+- 🎮 **Added 'Netplay options' button**: Now gathers all netplay related options (Shared Experience and Save progression)
+
 ### v3.0.0
 
 - ⚡ **Added a distance throttler for enemies**: They will not update / be rendered when too far away. Same idea for projectiles (reduced opacity for far away projectiles). This should help improve FPS

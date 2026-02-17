@@ -13,13 +13,18 @@ namespace MegabonkTogether.Patches
         private static readonly Services.ISynchronizationService synchronizationService = Plugin.Services.GetService<Services.ISynchronizationService>();
 
         /// <summary>
-        /// Skip the opening animation when in a netplay session
+        /// Skip the opening animation when in a netplay session and not in shared experience
         /// </summary>
         [HarmonyPostfix]
         [HarmonyPatch(nameof(ChestOpening.OpenChest))]
         public static void OpenChest_Postfix(ChestOpening __instance)
         {
             if (!synchronizationService.HasNetplaySessionStarted())
+            {
+                return;
+            }
+
+            if (synchronizationService.IsSharedExperienceEnabled())
             {
                 return;
             }
@@ -40,13 +45,18 @@ namespace MegabonkTogether.Patches
 
         /// <summary>
         /// Didn't find a proper way to hide the open button ¯\_(ツ)_/¯
+        /// Also let the original method run if shared experience is enabled
         /// </summary>
-        /// <param name="__instance"></param>
         [HarmonyPostfix]
         [HarmonyPatch(nameof(ChestWindowUi.Open))]
         public static void Open_Postfix(ChestWindowUi __instance)
         {
             if (!synchronizationService.HasNetplaySessionStarted())
+            {
+                return;
+            }
+
+            if (synchronizationService.IsSharedExperienceEnabled())
             {
                 return;
             }
@@ -61,7 +71,7 @@ namespace MegabonkTogether.Patches
         }
 
         /// <summary>
-        /// Add a 5 seconds of invulnerability and a warning after opening a chest in netplay
+        /// Add a 5 seconds of invulnerability and a warning after opening a chest in netplay on shared experience only
         /// </summary>
         /// <param name="__instance"></param>
         [HarmonyPostfix]
@@ -69,6 +79,11 @@ namespace MegabonkTogether.Patches
         public static void OpeningFinished_Postfix(ChestWindowUi __instance)
         {
             if (!synchronizationService.HasNetplaySessionStarted())
+            {
+                return;
+            }
+
+            if (synchronizationService.IsSharedExperienceEnabled())
             {
                 return;
             }
@@ -99,7 +114,7 @@ namespace MegabonkTogether.Patches
 
             if (CurrentRoutine == null)
             {
-                Plugin.Log.LogInfo("No active invulnerability routine, skipping.");
+                Plugin.Log.LogDebug("No active invulnerability routine, skipping.");
                 return;
             }
 

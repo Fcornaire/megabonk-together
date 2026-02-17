@@ -11,6 +11,7 @@ namespace MegabonkTogether.Common.Messages
         public bool IsFinalPortal { get; set; }
         public bool IsCryptKey { get; set; }
         public uint OwnerId { get; set; }
+        public bool IsMicrowaveAndHaveItem { get; set; }
     }
 
     public enum InteractableAction

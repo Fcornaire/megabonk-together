@@ -4,7 +4,7 @@
     <TargetFramework>net6.0</TargetFramework>
     <AssemblyName>MegabonkTogether</AssemblyName>
     <Product>MegabonkTogether</Product>
-    <Version>3.0.0</Version>
+    <Version>4.0.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>
@@ -108,6 +108,10 @@
 		</Reference>
 		<Reference Include="UnityEngine.Localization">
 			<HintPath>$(AssemblyPath)/Unity.Localization.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="Coffee.UIParticle">
+			<HintPath>$(AssemblyPath)/Coffee.UIParticle.dll</HintPath>
 			<Private>false</Private>
 		</Reference>
 	</ItemGroup>

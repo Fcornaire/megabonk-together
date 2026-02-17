@@ -11,7 +11,7 @@ namespace MegabonkTogether.Patches
         private static readonly ISynchronizationService synchronizationService = Plugin.Services.GetService<ISynchronizationService>();
 
         /// <summary>
-        /// No pause during netplay
+        /// No pause during netplay when no shared experience
         /// </summary>
         /// <returns></returns>
         [HarmonyPrefix]
@@ -19,6 +19,11 @@ namespace MegabonkTogether.Patches
         public static bool Pause_Postfix()
         {
             if (!synchronizationService.HasNetplaySessionStarted())
+            {
+                return true;
+            }
+
+            if (synchronizationService.IsSharedExperienceEnabled())
             {
                 return true;
             }

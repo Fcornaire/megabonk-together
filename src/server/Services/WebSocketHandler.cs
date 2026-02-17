@@ -54,22 +54,39 @@ namespace MegabonkTogether.Server.Services
 
                             if (queueDeadline.HasValue && DateTime.UtcNow >= queueDeadline.Value)
                             {
-                                if (randomQueue.Count >= MinPlayers)
+                                var sharedExpGroup = randomQueue.Values.Where(c => c.EnabledSharedExperience).ToList();
+                                var normalGroup = randomQueue.Values.Where(c => !c.EnabledSharedExperience).ToList();
+
+                                bool anyMatchCreated = false;
+
+                                if (sharedExpGroup.Count >= MinPlayers)
                                 {
-                                    logger.LogInformation("Queue timer expired, creating match.");
-                                    CreateMatch();
+                                    logger.LogInformation($"Queue timer expired, creating shared experience match ({sharedExpGroup.Count} players).");
+                                    CreateMatch(sharedExpGroup);
+                                    anyMatchCreated = true;
                                 }
-                                else if (randomQueue.Count > 0)
+
+                                if (normalGroup.Count >= MinPlayers)
                                 {
-                                    logger.LogInformation($"Queue timer expired with {randomQueue.Count} player(s), restarting timer...");
-                                    queueStartTime = DateTime.UtcNow;
-                                    queueDeadline = queueStartTime.Value.AddSeconds(MinWaitTimeSeconds);
+                                    logger.LogInformation($"Queue timer expired, creating normal match ({normalGroup.Count} players).");
+                                    CreateMatch(normalGroup);
+                                    anyMatchCreated = true;
                                 }
-                                else
+
+                                if (!anyMatchCreated)
                                 {
-                                    logger.LogInformation("Queue timer expired with no players, stopping timer.");
-                                    queueStartTime = null;
-                                    queueDeadline = null;
+                                    if (randomQueue.Count > 0)
+                                    {
+                                        logger.LogInformation($"Queue timer expired with {randomQueue.Count} player(s) but no group has enough players, restarting timer...");
+                                        queueStartTime = DateTime.UtcNow;
+                                        queueDeadline = queueStartTime.Value.AddSeconds(MinWaitTimeSeconds);
+                                    }
+                                    else
+                                    {
+                                        logger.LogInformation("Queue timer expired with no players, stopping timer.");
+                                        queueStartTime = null;
+                                        queueDeadline = null;
+                                    }
                                 }
                             }
                         }
@@ -92,7 +109,7 @@ namespace MegabonkTogether.Server.Services
             }
         }
 
-        public async Task HandleRandomClientAsync(WebSocket ws, string? remoteAddress, int remoteWSPort, CancellationToken token)
+        public async Task HandleRandomClientAsync(WebSocket ws, string? remoteAddress, int remoteWSPort, bool enabledSharedExperience, CancellationToken token)
         {
             var id = ConnectionIdPool.NewId();
 
@@ -100,7 +117,8 @@ namespace MegabonkTogether.Server.Services
             {
                 Socket = ws,
                 QueueId = "random",
-                Id = id
+                Id = id,
+                EnabledSharedExperience = enabledSharedExperience
             };
 
             clients[id] = client;
@@ -178,8 +196,15 @@ namespace MegabonkTogether.Server.Services
             }
         }
 
-        public async Task HandleFriendliesClientAsync(WebSocket ws, string? remoteAddress, int remoteWSPort,
-            Role role, string code, string name, CancellationToken token)
+        public async Task HandleFriendliesClientAsync(
+            WebSocket ws,
+            string? remoteAddress,
+            int remoteWSPort,
+            Role role,
+            string code,
+            string name,
+            bool enabledSharedExperience,
+            CancellationToken token)
         {
             var id = ConnectionIdPool.NewId();
             string roomCode = code.ToUpperInvariant();
@@ -195,7 +220,8 @@ namespace MegabonkTogether.Server.Services
                 QueueId = roomCode,
                 Id = id,
                 Role = role,
-                Name = name
+                Name = name,
+                EnabledSharedExperience = enabledSharedExperience
             };
 
             clients[id] = client;
@@ -450,6 +476,7 @@ namespace MegabonkTogether.Server.Services
                     Name = c.Name
                 }).ToList(),
                 Seed = lobby.Seed,
+                EnabledSharedExperience = lobby.Host.EnabledSharedExperience
             };
 
             logger.LogInformation($"Friendlies match created: host={lobby.Host.Id}, client={client.Id}, seed={lobby.Seed}");
@@ -501,8 +528,9 @@ namespace MegabonkTogether.Server.Services
 
                 randomQueue[client.Id] = client;
                 var queueCount = randomQueue.Count;
+                var groupCount = randomQueue.Values.Count(c => c.EnabledSharedExperience == client.EnabledSharedExperience);
 
-                logger.LogInformation($"Client {client.Id} added to queue, queue size: {queueCount}");
+                logger.LogInformation($"Client {client.Id} added to queue (sharedExp={client.EnabledSharedExperience}), queue size: {queueCount}, group size: {groupCount}");
 
                 if (queueStartTime == null)
                 {
@@ -510,7 +538,7 @@ namespace MegabonkTogether.Server.Services
                     queueDeadline = queueStartTime.Value.AddSeconds(MinWaitTimeSeconds);
                     logger.LogInformation($"Queue timer started, deadline: {queueDeadline}");
                 }
-                else if (queueCount > MinPlayers && queueDeadline.HasValue)
+                else if (groupCount > MinPlayers && queueDeadline.HasValue)
                 {
                     var newDeadline = queueDeadline.Value.AddSeconds(AdditionalTimePerPlayerSeconds);
                     var maxDeadline = queueStartTime.Value.AddSeconds(MaxWaitTimeSeconds);
@@ -521,12 +549,11 @@ namespace MegabonkTogether.Server.Services
 
                 EnsureQueueIsStillConnected();
 
-                if (queueCount >= MaxPlayers)
+                if (groupCount >= MaxPlayers)
                 {
-                    logger.LogInformation($"Queue reached max capacity ({MaxPlayers}), creating match...");
-                    queueStartTime = null;
-                    queueDeadline = null;
-                    CreateMatch();
+                    logger.LogInformation($"Queue group (sharedExp={client.EnabledSharedExperience}) reached max capacity ({MaxPlayers}), creating match...");
+                    var group = randomQueue.Values.Where(c => c.EnabledSharedExperience == client.EnabledSharedExperience).ToList();
+                    CreateMatch(group);
                 }
             }
         }
@@ -548,17 +575,15 @@ namespace MegabonkTogether.Server.Services
             }
         }
 
-        private void CreateMatch()
+        private void CreateMatch(List<ClientInfo> candidates)
         {
-            var playersToMatch = Math.Min(MaxPlayers, randomQueue.Count);
-            var matches = randomQueue.Take(playersToMatch).ToList();
+            var playersToMatch = Math.Min(MaxPlayers, candidates.Count);
+            var matchedClients = candidates.Take(playersToMatch).ToList();
 
-            foreach (var kvp in matches)
+            foreach (var client in matchedClients)
             {
-                randomQueue.TryRemove(kvp.Key, out _);
+                randomQueue.TryRemove(client.Id, out _);
             }
-
-            var matchedClients = matches.Select(kvp => kvp.Value).ToList();
 
             if (matchedClients.Count < MinPlayers)
             {
@@ -605,6 +630,7 @@ namespace MegabonkTogether.Server.Services
                     HostConnectionId = host.Id
                 }).ToList(),
                 Seed = (uint)Random.Shared.Next(),
+                EnabledSharedExperience = host.EnabledSharedExperience
             };
 
             foreach (var c in matchedClients)

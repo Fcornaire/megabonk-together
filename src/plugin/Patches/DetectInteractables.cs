@@ -77,9 +77,33 @@ namespace MegabonkTogether.Patches
 
         private static bool CanSynchronize(DetectInteractables __instance)
         {
-            if (!__instance.CanInteract())
+            if (!__instance.CanInteract() || !__instance.currentInteractable.CanInteract())
             {
+                Plugin.Log.LogWarning($"Cant interact with {__instance?.currentInteractable}");
                 return false;
+            }
+
+            var microwave = __instance.currentInteractable.GetComponentInChildren<InteractableMicrowave>();
+            if (microwave != null)
+            {
+                if (microwave.GetPrice() > GameManager.Instance.player.inventory.gold)
+                {
+                    Plugin.Log.LogDebug($"Not enough gold to interact with microwave! Required: {microwave.GetPrice()}, Current: {GameManager.Instance.player.inventory.gold}");
+                    return false;
+                }
+
+                if (microwave.hasItem)
+                {
+                    Plugin.Log.LogDebug($"Microwave already has an item!");
+                    return true;
+                }
+
+                var uniqueItemsInRarity = GameManager.Instance.player.inventory.itemInventory.GetUniqueItemsInRarity(microwave.rarity);
+                if (uniqueItemsInRarity < 2)
+                {
+                    Plugin.Log.LogDebug($"Not enough items of rarity {microwave.rarity} to interact with microwave");
+                    return false;
+                }
             }
 
             var chest = __instance.currentInteractable.GetComponentInChildren<InteractableChest>();
