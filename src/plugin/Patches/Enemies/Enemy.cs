@@ -6,6 +6,7 @@ using MegabonkTogether.Scripts.Enemies;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
 using MonoMod.Utils;
+using UnityEngine;
 
 namespace MegabonkTogether.Patches.Enemies
 {
@@ -322,6 +323,12 @@ namespace MegabonkTogether.Patches.Enemies
 
             if (__instance.IsBoss() || __instance.IsStageBoss() || __instance.IsFinalBoss())
             {
+                var renderer = __instance.GetComponentInChildren<Renderer>();
+                if (renderer != null && !renderer.enabled)
+                {
+                    renderer.enabled = true;
+                }
+
                 return true;
             }
 
