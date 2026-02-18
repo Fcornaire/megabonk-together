@@ -9,6 +9,8 @@ namespace MegabonkTogether.Server.Services
         void ClientConnected(string? ipAddress);
         void ClientDisconnected();
         void RunStarted(int playerCount, string mapName, int stageLevel, List<string> characters);
+        void LobbyCreated(bool isSharedExperience);
+        void LobbyDeleted(bool isSharedExperience);
     }
 
     public class MetricsService : IMetricsService, IDisposable
@@ -21,6 +23,8 @@ namespace MegabonkTogether.Server.Services
         private int peakUniqueConnections = 0;
         private readonly ConcurrentDictionary<string, int> dailyRunsByMapAndStage = new();
         private readonly ConcurrentDictionary<string, int> dailyCharacterUsage = new();
+        private int activeSharedExperienceLobbies = 0;
+        private int activeRegularLobbies = 0;
         private DateTime lastResetDate = DateTime.UtcNow.Date;
         private readonly object resetLock = new();
         private readonly Timer resetTimer;
@@ -64,6 +68,16 @@ namespace MegabonkTogether.Server.Services
                 () => GetDailyCharacterUsage(),
                 description: "Number of times each character was picked today");
 
+            meter.CreateObservableGauge(
+                "megabonk.active_shared_experience_lobbies",
+                () => activeSharedExperienceLobbies,
+                description: "Number of active lobbies in shared experience mode");
+
+            meter.CreateObservableGauge(
+                "megabonk.active_regular_lobbies",
+                () => activeRegularLobbies,
+                description: "Number of active lobbies in regular mode");
+
             resetTimer = new Timer(CheckAndResetIfNewDay, null, TimeSpan.Zero, TimeSpan.FromHours(1));
         }
 
@@ -96,6 +110,30 @@ namespace MegabonkTogether.Server.Services
             foreach (var character in characters)
             {
                 dailyCharacterUsage.AddOrUpdate(character, 1, (_, count) => count + 1);
+            }
+        }
+
+        public void LobbyCreated(bool isSharedExperience)
+        {
+            if (isSharedExperience)
+            {
+                Interlocked.Increment(ref activeSharedExperienceLobbies);
+            }
+            else
+            {
+                Interlocked.Increment(ref activeRegularLobbies);
+            }
+        }
+
+        public void LobbyDeleted(bool isSharedExperience)
+        {
+            if (isSharedExperience)
+            {
+                Interlocked.Decrement(ref activeSharedExperienceLobbies);
+            }
+            else
+            {
+                Interlocked.Decrement(ref activeRegularLobbies);
             }
         }
 

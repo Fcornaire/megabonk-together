@@ -22,6 +22,7 @@ namespace MegabonkTogether.Server.Services
         private readonly ConcurrentDictionary<uint, ClientInfo> clients = new();
         private readonly ConcurrentDictionary<uint, ClientInfo> randomQueue = new();
         private readonly ConcurrentDictionary<string, Lobby> friendliesLobbies = new();
+        private readonly ConcurrentDictionary<uint, bool> randomMatchHosts = new();
         private readonly ILogger<WebSocketHandler> logger;
         private readonly IMetricsService metricsService;
         private readonly IRendezVousServer rendezVousServer;
@@ -177,6 +178,12 @@ namespace MegabonkTogether.Server.Services
                 clients.TryRemove(id, out _);
                 rendezVousServer.CleanRelaySession(id);
                 metricsService.ClientDisconnected();
+
+                if (randomMatchHosts.TryRemove(id, out var wasSharedExperience))
+                {
+                    metricsService.LobbyDeleted(wasSharedExperience);
+                }
+
                 RemoveFromQueue(client);
                 ConnectionIdPool.Release(id);
 
@@ -289,6 +296,7 @@ namespace MegabonkTogether.Server.Services
                         }
 
                         friendliesLobbies.TryRemove(roomCode, out _);
+                        metricsService.LobbyDeleted(lobby.Host.EnabledSharedExperience);
                     }
 
                     RoomCodePool.Release(roomCode);
@@ -350,6 +358,8 @@ namespace MegabonkTogether.Server.Services
                 RoomCode = roomCode,
                 Seed = (uint)Random.Shared.Next(),
             };
+
+            metricsService.LobbyCreated(host.EnabledSharedExperience);
 
             logger.LogInformation($"Host {host.Id} created lobby with code: {roomCode}");
 
@@ -440,6 +450,7 @@ namespace MegabonkTogether.Server.Services
             {
                 logger.LogWarning($"Client {client.Id} tried to join room {roomCode} but host is disconnected");
                 friendliesLobbies.TryRemove(roomCode, out _);
+                metricsService.LobbyDeleted(lobby.Host.EnabledSharedExperience);
                 IWsMessage errorMsg = new MatchmakingServerConnectionStatus
                 {
                     ConnectionId = client.Id,
@@ -618,6 +629,9 @@ namespace MegabonkTogether.Server.Services
             }
 
             var host = matchedClients[Random.Shared.Next(matchedClients.Count)];
+
+            randomMatchHosts[host.Id] = host.EnabledSharedExperience;
+            metricsService.LobbyCreated(host.EnabledSharedExperience);
 
             logger.LogInformation($"Match created with {matchedClients.Count} players: {string.Join(",", matchedClients.Select(c => c.Id))}, host: {host.Id}");
 
