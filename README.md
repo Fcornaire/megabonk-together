@@ -140,9 +140,13 @@ Start by downloading the BepInex loader [BepInEx-Unity.IL2CPP-win-x64-6.0.0-be.7
 
 Play on a random queue, the next 6 players within a time period will get matched together (no pun intended)
 
-## Freindlies
+## Friendlies
 
 Private queue, Host as to share the room code (copy from the uper right button) and paste it to the players he want to play with
+
+# Self-Hosting a Server
+
+If you want to run your own matchmaking/relay server, check the [Self-Hosting Guide](docs/Setup-Own-Server.md).
 
 # Known issue
 
