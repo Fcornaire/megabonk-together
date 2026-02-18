@@ -4,8 +4,7 @@ on:
   workflow_run:
     workflows: ["Build MegabonkTogether Plugin"]
     types: [completed]
-    branches:
-      - 'main'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -13,34 +12,68 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: >-
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      github.event_name == 'workflow_dispatch'
 
     steps:
+      - name: Determine version
+        id: determine_version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            TAG="${{ github.event.workflow_run.head_branch }}"
+          else
+            TAG=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/repos/${{ github.repository }}/releases/latest" | jq -r '.tag_name')
+            if [ -z "$TAG" ] || [ "$TAG" = "null" ]; then
+              echo "ERROR: Could not determine latest release tag"
+              exit 1
+            fi
+          fi
+          VERSION=${TAG#v}
+          echo "TAG=$TAG" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "SERVER_ARCHIVE_NAME=MegabonkTogether-Server-win-x64-${VERSION}.zip" >> $GITHUB_ENV
+          echo "Resolved version: $VERSION (tag: $TAG)"
+
+      - name: Check if server asset already exists
+        id: check_existing
+        run: |
+          RELEASE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/${VERSION}")
+
+          EXISTING=$(echo "$RELEASE" | jq -r ".assets[] | select(.name == \"${SERVER_ARCHIVE_NAME}\") | .name")
+
+          if [ -n "$EXISTING" ]; then
+            echo "Server asset ${SERVER_ARCHIVE_NAME} already exists in release. Skipping."
+            echo "SKIP=true" >> $GITHUB_ENV
+          else
+            echo "No existing server asset found. Proceeding with build."
+            echo "SKIP=false" >> $GITHUB_ENV
+          fi
+
       - name: Checkout repository
+        if: env.SKIP == 'false'
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_branch }}
+          ref: ${{ env.TAG }}
 
       - name: Setup .NET
+        if: env.SKIP == 'false'
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: "6.0.x"
 
       - name: Restore Server
+        if: env.SKIP == 'false'
         run: dotnet restore src/server/MegabonkTogether.Server.csproj
 
       - name: Publish Server (Windows x64)
+        if: env.SKIP == 'false'
         run: dotnet publish src/server/MegabonkTogether.Server.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -o publish/server
 
-      - name: Set version from tag
-        id: set_version
-        run: |
-          TAG="${{ github.event.workflow_run.head_branch }}"
-          VERSION=${TAG#v}
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "SERVER_ARCHIVE_NAME=MegabonkTogether-Server-win-x64-${VERSION}.zip" >> $GITHUB_ENV
-
       - name: Create zip of Server
+        if: env.SKIP == 'false'
         run: |
           mkdir -p artifacts
           ZIP="artifacts/${SERVER_ARCHIVE_NAME}"
@@ -63,11 +96,9 @@ jobs:
           SERVER_ARCHIVE_NAME: ${{ env.SERVER_ARCHIVE_NAME }}
 
       - name: Get release upload URL
+        if: env.SKIP == 'false'
         id: get_release
         run: |
-          TAG="${{ github.event.workflow_run.head_branch }}"
-          VERSION=${TAG#v}
-
           RELEASE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/repos/${{ github.repository }}/releases/tags/${VERSION}")
 
@@ -83,12 +114,13 @@ jobs:
           echo "Found release upload URL: $UPLOAD_URL"
 
       - name: Upload server zip to release
+        if: env.SKIP == 'false'
         run: |
           curl -s -X POST \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Content-Type: application/zip" \
             --data-binary @"artifacts/${SERVER_ARCHIVE_NAME}" \
-          "${UPLOAD_URL}?name=${SERVER_ARCHIVE_NAME}"
+            "${UPLOAD_URL}?name=${SERVER_ARCHIVE_NAME}"
         env:
           SERVER_ARCHIVE_NAME: ${{ env.SERVER_ARCHIVE_NAME }}
           UPLOAD_URL: ${{ env.UPLOAD_URL }}
