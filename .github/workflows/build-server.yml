@@ -1,0 +1,94 @@
+name: Build MegabonkTogether Server
+
+on:
+  workflow_run:
+    workflows: ["Build MegabonkTogether Plugin"]
+    types: [completed]
+    branches:
+      - 'main'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: "6.0.x"
+
+      - name: Restore Server
+        run: dotnet restore src/server/MegabonkTogether.Server.csproj
+
+      - name: Publish Server (Windows x64)
+        run: dotnet publish src/server/MegabonkTogether.Server.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -o publish/server
+
+      - name: Set version from tag
+        id: set_version
+        run: |
+          TAG="${{ github.event.workflow_run.head_branch }}"
+          VERSION=${TAG#v}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "SERVER_ARCHIVE_NAME=MegabonkTogether-Server-win-x64-${VERSION}.zip" >> $GITHUB_ENV
+
+      - name: Create zip of Server
+        run: |
+          mkdir -p artifacts
+          ZIP="artifacts/${SERVER_ARCHIVE_NAME}"
+
+          echo "Zipping server publish output into $ZIP"
+
+          REPO_ROOT="$(pwd)"
+          TMPDIR=$(mktemp -d)
+          DESTDIR="$TMPDIR/MegabonkTogether-Server"
+          mkdir -p "$DESTDIR"
+
+          cp -r publish/server/* "$DESTDIR/"
+
+          (cd "$TMPDIR" && zip -r "$REPO_ROOT/$ZIP" "MegabonkTogether-Server")
+
+          rm -rf "$TMPDIR"
+
+          ls -la artifacts
+        env:
+          SERVER_ARCHIVE_NAME: ${{ env.SERVER_ARCHIVE_NAME }}
+
+      - name: Get release upload URL
+        id: get_release
+        run: |
+          TAG="${{ github.event.workflow_run.head_branch }}"
+          VERSION=${TAG#v}
+
+          RELEASE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/${VERSION}")
+
+          UPLOAD_URL=$(echo "$RELEASE" | jq -r '.upload_url' | sed 's/{?name,label}//')
+
+          if [ -z "$UPLOAD_URL" ] || [ "$UPLOAD_URL" = "null" ]; then
+            echo "ERROR: Could not find release for tag ${VERSION}"
+            echo "$RELEASE"
+            exit 1
+          fi
+
+          echo "UPLOAD_URL=$UPLOAD_URL" >> $GITHUB_ENV
+          echo "Found release upload URL: $UPLOAD_URL"
+
+      - name: Upload server zip to release
+        run: |
+          curl -s -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Content-Type: application/zip" \
+            --data-binary @"artifacts/${SERVER_ARCHIVE_NAME}" \
+          "${UPLOAD_URL}?name=${SERVER_ARCHIVE_NAME}"
+        env:
+          SERVER_ARCHIVE_NAME: ${{ env.SERVER_ARCHIVE_NAME }}
+          UPLOAD_URL: ${{ env.UPLOAD_URL }}
