@@ -3753,6 +3753,16 @@ namespace MegabonkTogether.Services
                 return;
             }
 
+            if (IsSharedExperienceEnabled() && encounterService.IsClosable()) //Making sure to unblock people if somemone leave and we can close
+            {
+                IGameNetworkMessage closeMessage = new CloseEncounter
+                {
+                };
+
+                udpClientService.SendToAllClients(closeMessage, LiteNetLib.DeliveryMethod.ReliableOrdered);
+                OnCloseEncounter();
+            }
+
             var allPlayersAliveIdWithout = playerManagerService.GetAllPlayersAlive().Where(p => p.ConnectionId != disconnected.ConnectionId).Select(p => p.ConnectionId).ToList();
             var updated = enemyManagerService.ReTargetEnemies(disconnected.ConnectionId, allPlayersAliveIdWithout);
 
