@@ -9,7 +9,8 @@
 [version."4.0.0"]
 changes = [
     "Added a new <color=#FFD700><size=32><b>(Experimental!)</b></size></color> <b>Shared Experience</b> mode! Shared XP,Gold and interactions across all players. This also imply an active <b>Pause</b> on every interactions. The original mode is still available",
-    "Added a 'Netplay options' button that now gather all netplay related options (Shared Experience and Save progression)"
+    "Added a 'Netplay options' button that now gather all netplay related options (Shared Experience and Save progression)",
+    "Fixed some boss not rendering sometimes for some reason"
 ]
 
 [version."3.0.0"]
