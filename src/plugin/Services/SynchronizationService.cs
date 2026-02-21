@@ -2099,15 +2099,6 @@ namespace MegabonkTogether.Services
                 player.RefreshConstantAttack(upgradeModifiers);
                 TomeInventory.A_TomeUpgrade = callbacks;
 
-                if (IsSharedExperienceEnabled() && (ETome)added.Tome == ETome.Xp)
-                {
-                    var xpMult = GameManager.Instance.player.inventory.playerStats.GetStat(EStat.XpIncreaseMultiplier);
-                    logger.LogInfo($"Added XP for player, current player XP : {xpMult}");
-
-                    //logger.LogWarning("KEEPING SAME XP %");
-                    //GameManager.Instance.player.inventory.tomeInventory.AddTome(tomeData, upgradeModifiers, (ERarity)added.Rarity);
-                }
-
                 Plugin.CAN_SEND_MESSAGES = true;
             }
         }

@@ -6,6 +6,11 @@
 #     "Change 2 description",
 # ]
 
+[version."4.0.1"]
+changes = [
+    "Attempt to fix encounter desync (Shared Experience): Better handling of multiple encounters occurring at the same time. It should prevent deadlocks (though laggy players might still cause issues). This fix should at least help for now."
+]
+
 [version."4.0.0"]
 changes = [
     "Added a new <color=#FFD700><size=32><b>(Experimental!)</b></size></color> <b>Shared Experience</b> mode! Shared XP,Gold and interactions across all players. This also imply an active <b>Pause</b> on every interactions. The original mode is still available",
