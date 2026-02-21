@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
 using System.Linq;
 
 namespace MegabonkTogether.Services
@@ -17,12 +17,12 @@ namespace MegabonkTogether.Services
 
     internal class EncounterService(IPlayerManagerService playerManagerService) : IEncounterService
     {
-        private readonly HashSet<uint> closedEncounterPerPlayer = [];
+        private readonly ConcurrentDictionary<uint, byte> closedEncounterPerPlayer = new();
         private bool forceClose = false;
 
         public void AddClosedEncounterForPlayer(uint playerId)
         {
-            closedEncounterPerPlayer.Add(playerId);
+            closedEncounterPerPlayer.TryAdd(playerId, 0);
         }
 
         public void ClearClosedEncounters()
@@ -34,7 +34,7 @@ namespace MegabonkTogether.Services
         public bool IsClosable()
         {
             var allPlayerCount = playerManagerService.GetAllPlayers().Count();
-            return closedEncounterPerPlayer.Count() >= allPlayerCount || forceClose;
+            return closedEncounterPerPlayer.Count >= allPlayerCount || forceClose;
         }
 
         public void Close()
