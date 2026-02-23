@@ -43,6 +43,10 @@ More info at [Notable Network Changes](./NETPLAY_CHANGES.md)
 <details>
 <summary>📋 Click to view full changelog</summary>
 
+### v4.0.2
+
+- 🪙 **Attempt to fix gold desync (Shared Experience)**: Computing delta instead of raw changes
+
 ### v4.0.1
 
 - 🔄 **Attempt to fix encounter desync (Shared Experience)**: Better handling of multiple encounters occurring at the same time. It should prevent deadlocks (though laggy players might still cause issues). This fix should at least help for now.

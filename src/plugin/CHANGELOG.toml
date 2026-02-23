@@ -6,6 +6,11 @@
 #     "Change 2 description",
 # ]
 
+[version."4.0.2"]
+changes = [
+    "Attempt to fix gold desync (Shared Experience): Computing delta instead of raw changes"
+]
+
 [version."4.0.1"]
 changes = [
     "Attempt to fix encounter desync (Shared Experience): Better handling of multiple encounters occurring at the same time. It should prevent deadlocks (though laggy players might still cause issues). This fix should at least help for now."
