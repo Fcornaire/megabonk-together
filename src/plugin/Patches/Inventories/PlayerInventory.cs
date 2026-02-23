@@ -30,12 +30,29 @@ namespace MegabonkTogether.Patches.Inventories
             return true;
         }
 
+
+        /// <summary>
+        /// Capture gold before change to compute actual delta post-multiplier.
+        /// </summary>
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(PlayerInventory.ChangeGold))]
+        public static void ChangeGold_Prefix(PlayerInventory __instance, ref float __state)
+        {
+            if (!synchronizationService.HasNetplaySessionStarted())
+            {
+                return;
+            }
+
+            __state = __instance.gold;
+        }
+
         /// <summary>
         /// Synchronize gold changes in shared experience mode.
+        /// Because multiple deductions can happen, we make sure to not pass under zero
         /// </summary>
         [HarmonyPostfix]
         [HarmonyPatch(nameof(PlayerInventory.ChangeGold))]
-        public static void ChangeGold_Postfix(PlayerInventory __instance, int amount)
+        public static void ChangeGold_Postfix(PlayerInventory __instance, int amount, float __state)
         {
             if (!synchronizationService.HasNetplaySessionStarted())
             {
@@ -52,7 +69,13 @@ namespace MegabonkTogether.Patches.Inventories
                 return;
             }
 
-            synchronizationService.OnChangeGold(amount, __instance.gold);
+            float actualDelta = __instance.gold - __state;
+            synchronizationService.OnChangeGold(actualDelta);
+
+            if (__instance.gold < 0)
+            {
+                __instance.gold = 0;
+            }
         }
     }
 }

@@ -128,7 +128,7 @@ namespace MegabonkTogether.Services
         public bool IsSharedExperienceEnabled();
         public void PlayerXpAddXp(int xp, int amount, float leftOverXp);
         public void RewardFinished();
-        public void OnChangeGold(int amount, float gold);
+        public void OnChangeGold(float amount);
     }
     internal class SynchronizationService : ISynchronizationService
     {
@@ -4353,13 +4353,12 @@ namespace MegabonkTogether.Services
             //EncounterWindows.A_WindowClosed.Invoke();
         }
 
-        public void OnChangeGold(int amount, float gold)
+        public void OnChangeGold(float amount)
         {
             IGameNetworkMessage message = new GoldChanged
             {
                 Amount = amount,
-                OwnerId = playerManagerService.GetLocalPlayer().ConnectionId,
-                Gold = gold <= 0 ? 0 : gold
+                OwnerId = playerManagerService.GetLocalPlayer().ConnectionId
             };
 
             var isHost = IsServerMode() ?? false;
@@ -4376,7 +4375,11 @@ namespace MegabonkTogether.Services
         private void OnReceivedChangeGold(GoldChanged changed)
         {
             Plugin.CAN_SEND_MESSAGES = false;
-            GameManager.Instance.player.inventory.gold = changed.Gold;
+            GameManager.Instance.player.inventory.gold += changed.Amount;
+            if (GameManager.Instance.player.inventory.gold < 0)
+            {
+                GameManager.Instance.player.inventory.gold = 0;
+            }
             GameManager.Instance.player.inventory.ChangeGold(0);
             Plugin.CAN_SEND_MESSAGES = true;
         }
