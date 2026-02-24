@@ -6,6 +6,11 @@
 #     "Change 2 description",
 # ]
 
+[version."4.0.3"]
+changes = [
+    "Fixed Gold desync (Shared Experience): Gold sharing has been reworked a bit. All gains are now shared across everyone, while losses are applied individually. Players who can't afford a chest will be paused until eligible players finish"
+]
+
 [version."4.0.2"]
 changes = [
     "Attempt to fix gold desync (Shared Experience): Computing delta instead of raw changes"
