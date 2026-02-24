@@ -4,7 +4,7 @@
     <TargetFramework>net6.0</TargetFramework>
     <AssemblyName>MegabonkTogether</AssemblyName>
     <Product>MegabonkTogether</Product>
-    <Version>4.0.2</Version>
+    <Version>4.0.3</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>

@@ -128,7 +128,7 @@ namespace MegabonkTogether.Services
         public bool IsSharedExperienceEnabled();
         public void PlayerXpAddXp(int xp, int amount, float leftOverXp);
         public void RewardFinished();
-        public void OnChangeGold(float amount);
+        public void OnChangeGold(int amount);
     }
     internal class SynchronizationService : ISynchronizationService
     {
@@ -2449,7 +2449,7 @@ namespace MegabonkTogether.Services
                     var chest = interactableObj.GetComponent<InteractableChest>();
                     if (chest != null)
                     {
-                        if (GameManager.Instance.player.IsDead())
+                        if (GameManager.Instance.player.IsDead() || !chest.CanAfford())
                         {
                             MyTime.Pause();
                             RewardFinished();
@@ -4353,7 +4353,7 @@ namespace MegabonkTogether.Services
             //EncounterWindows.A_WindowClosed.Invoke();
         }
 
-        public void OnChangeGold(float amount)
+        public void OnChangeGold(int amount)
         {
             IGameNetworkMessage message = new GoldChanged
             {
@@ -4375,12 +4375,7 @@ namespace MegabonkTogether.Services
         private void OnReceivedChangeGold(GoldChanged changed)
         {
             Plugin.CAN_SEND_MESSAGES = false;
-            GameManager.Instance.player.inventory.gold += changed.Amount;
-            if (GameManager.Instance.player.inventory.gold < 0)
-            {
-                GameManager.Instance.player.inventory.gold = 0;
-            }
-            GameManager.Instance.player.inventory.ChangeGold(0);
+            GameManager.Instance.player.inventory.ChangeGold(changed.Amount);
             Plugin.CAN_SEND_MESSAGES = true;
         }
     }
