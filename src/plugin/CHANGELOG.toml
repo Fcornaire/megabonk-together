@@ -6,6 +6,12 @@
 #     "Change 2 description",
 # ]
 
+[version."4.1.0"]
+changes = [
+    "More improvements to tackle FPS issues"
+]
+
+
 [version."4.0.3"]
 changes = [
     "Fixed Gold desync (Shared Experience): Gold sharing has been reworked a bit. All gains are now shared across everyone, while losses are applied individually. Players who can't afford a chest will be paused until eligible players finish"

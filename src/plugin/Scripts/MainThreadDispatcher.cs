@@ -10,11 +10,15 @@ namespace MegabonkTogether.Scripts
 
         public void Update()
         {
-            while (_executionQueue.Count > 0)
+            while (_executionQueue.TryDequeue(out var action))
             {
-                if (_executionQueue.TryDequeue(out var action))
+                try
                 {
                     action();
+                }
+                catch (Exception ex)
+                {
+                    Plugin.Log.LogWarning(ex);
                 }
             }
         }

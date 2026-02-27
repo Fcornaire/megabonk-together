@@ -74,6 +74,13 @@ namespace MegabonkTogether.Patches.Unity
                 return true;
             }
 
+            if (__instance == null)
+            {
+                __result = GameManager.Instance.player.transform.position;
+                return false;
+            }
+
+
             if (__instance.name == "Hips" && playerManagerService.PeakNetplayerPositionRequest().HasValue)
             {
                 var netPlayerId = playerManagerService.PeakNetplayerPositionRequest().Value;
@@ -109,6 +116,12 @@ namespace MegabonkTogether.Patches.Unity
             if (!synchronizationService.HasNetplaySessionStarted())
             {
                 return true;
+            }
+
+            if (__instance == null)
+            {
+                __result = GameManager.Instance.player.transform.rotation;
+                return false;
             }
 
             if (__instance.name == "Renderer" && playerManagerService.PeakNetplayerPositionRequest().HasValue)

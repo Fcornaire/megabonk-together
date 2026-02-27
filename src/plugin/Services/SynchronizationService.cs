@@ -839,6 +839,12 @@ namespace MegabonkTogether.Services
                 spawnedEnemy.ExtraSizeMultiplier
             );
 
+            if (enemy == null)
+            {
+                logger.LogWarning($"Failed to spawn enemy: {(EEnemy)spawnedEnemy.Name} at position: {spawnedEnemy.Position.ToUnityVector3()}");
+                return;
+            }
+
             var extraMaterial = spawnedObjectManagerService.GetExtraEnemyMaterial(enemy.enemyData.enemyName);
             if (extraMaterial != null)
             {
