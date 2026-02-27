@@ -43,6 +43,10 @@ More info at [Notable Network Changes](./NETPLAY_CHANGES.md)
 <details>
 <summary>📋 Click to view full changelog</summary>
 
+### v4.1.0
+
+- 🚀 **More improvements to tackle FPS issues**
+
 ### v4.0.3
 
 - 🪙 **Fixed Gold desync (Shared Experience)**: Gold sharing has been reworked. Gains are now shared across everyone, while losses are applied individually. Players who can’t afford a chest are paused until eligible players finish

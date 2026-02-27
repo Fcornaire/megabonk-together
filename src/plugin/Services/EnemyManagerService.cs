@@ -34,7 +34,7 @@ namespace MegabonkTogether.Services
     internal class EnemyManagerService : IEnemyManagerService
     {
         private readonly ConcurrentDictionary<uint, Enemy> spawnedEnemies = [];
-        private ConcurrentBag<EnemyModel> previousSpawnedEnemiesDelta = [];
+        private Dictionary<uint, EnemyModel> previousSpawnedEnemiesDelta = [];
         private readonly ConcurrentDictionary<Enemy, string> reviverEnemies_NetplayNames = [];
         private readonly ConcurrentDictionary<uint, int> reviverSpawnCountPerOwner = [];
         private uint currentEnemyId = 0; //TODO: concurrency?
@@ -105,7 +105,7 @@ namespace MegabonkTogether.Services
 
             if (previousSpawnedEnemiesDelta.Count == 0)
             {
-                previousSpawnedEnemiesDelta = [.. currentEnemies];
+                previousSpawnedEnemiesDelta = currentEnemies.ToDictionary(e => e.Id);
                 return currentEnemies;
             }
 
@@ -113,15 +113,13 @@ namespace MegabonkTogether.Services
 
             foreach (var current in currentEnemies)
             {
-                var previous = previousSpawnedEnemiesDelta.FirstOrDefault(e => e.Id == current.Id);
-
-                if (previous == null || HasDelta(previous, current))
+                if (!previousSpawnedEnemiesDelta.TryGetValue(current.Id, out var previous) || HasDelta(previous, current))
                 {
                     deltas.Add(current);
                 }
             }
 
-            previousSpawnedEnemiesDelta = [.. currentEnemies];
+            previousSpawnedEnemiesDelta = currentEnemies.ToDictionary(e => e.Id);
 
             return deltas;
         }
@@ -199,7 +197,7 @@ namespace MegabonkTogether.Services
             currentEnemyId = 0;
             //spawnedEnemies.Select(Enemy => Enemy.Value).ToList().ForEach(enemy => GameObject.Destroy(enemy.gameObject));
             spawnedEnemies.Clear();
-            previousSpawnedEnemiesDelta.Clear();
+            previousSpawnedEnemiesDelta = [];
         }
 
         //TODO: the applied values should be stored in GameBalanceService
