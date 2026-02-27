@@ -876,39 +876,73 @@ namespace MegabonkTogether.Services
             if (MapController.currentMap.eMap == Assets.Scripts._Data.MapsAndStages.EMap.Desert) //TODO to test
             {
 
-                if (enemy.enemyData.enemyName == EEnemy.Ghost)
-                {
-                    InteractableDesertGrave grave = specificDesertGraves.FirstOrDefault(go => go.name.Contains("DesertGrave1"))?.GetComponent<InteractableDesertGrave>();
-                    grave?.myEnemy = enemy;
-                }
+                                if (enemy.enemyData.enemyName == EEnemy.Ghost)
 
-                if (enemy.enemyData.enemyName == EEnemy.GreaterGhost)
-                {
-                    InteractableDesertGrave grave = specificDesertGraves.FirstOrDefault(go => go.name.Contains("DesertGrave2"))?.GetComponent<InteractableDesertGrave>();
-                    grave?.myEnemy = enemy;
-                }
+                                {
 
-                if (enemy.enemyData.enemyName == EEnemy.GhostPurple)
-                {
-                    InteractableDesertGrave grave = specificDesertGraves.FirstOrDefault(go => go.name.Contains("DesertGrave3"))?.GetComponent<InteractableDesertGrave>();
-                    grave?.myEnemy = enemy;
-                }
+                                    InteractableDesertGrave grave = specificDesertGraves.FirstOrDefault(go => go.name.Contains("DesertGrave1"))?.GetComponent<InteractableDesertGrave>();
 
-                if (enemy.enemyData.enemyName == EEnemy.GhostRed)
-                {
-                    InteractableDesertGrave grave = specificDesertGraves.FirstOrDefault(go => go.name.Contains("DesertGrave4"))?.GetComponent<InteractableDesertGrave>();
-                    grave?.myEnemy = enemy;
-                }
+                                    if (grave != null) grave.myEnemy = enemy;
 
-                if (enemy.enemyData.enemyName == EEnemy.CalciumDad)
-                {
-                    InteractableSkeletonKingStatue skeletonStatue = specificDesertGraves.FirstOrDefault(go => go.name.Contains("SkeletonKingStatue"))?.GetComponent<InteractableSkeletonKingStatue>();
-                    if (skeletonStatue == null)
-                    {
-                        logger.LogWarning("SkeletonKingStatue not found for CalciumDad enemy.");
-                    }
-                    skeletonStatue?.myEnemy = enemy;
-                }
+                                }
+
+                
+
+                                if (enemy.enemyData.enemyName == EEnemy.GreaterGhost)
+
+                                {
+
+                                    InteractableDesertGrave grave = specificDesertGraves.FirstOrDefault(go => go.name.Contains("DesertGrave2"))?.GetComponent<InteractableDesertGrave>();
+
+                                    if (grave != null) grave.myEnemy = enemy;
+
+                                }
+
+                
+
+                                if (enemy.enemyData.enemyName == EEnemy.GhostPurple)
+
+                                {
+
+                                    InteractableDesertGrave grave = specificDesertGraves.FirstOrDefault(go => go.name.Contains("DesertGrave3"))?.GetComponent<InteractableDesertGrave>();
+
+                                    if (grave != null) grave.myEnemy = enemy;
+
+                                }
+
+                
+
+                                if (enemy.enemyData.enemyName == EEnemy.GhostRed)
+
+                                {
+
+                                    InteractableDesertGrave grave = specificDesertGraves.FirstOrDefault(go => go.name.Contains("DesertGrave4"))?.GetComponent<InteractableDesertGrave>();
+
+                                    if (grave != null) grave.myEnemy = enemy;
+
+                                }
+
+                
+
+                                if (enemy.enemyData.enemyName == EEnemy.CalciumDad)
+
+                                {
+
+                                    InteractableSkeletonKingStatue skeletonStatue = specificDesertGraves.FirstOrDefault(go => go.name.Contains("SkeletonKingStatue"))?.GetComponent<InteractableSkeletonKingStatue>();
+
+                                    if (skeletonStatue == null)
+
+                                    {
+
+                                        logger.LogWarning("SkeletonKingStatue not found for CalciumDad enemy.");
+
+                                    }
+
+                
+
+                                    if (skeletonStatue != null) skeletonStatue.myEnemy = enemy;
+
+                                }
             }
 
             if (MapController.currentMap.eMap == Assets.Scripts._Data.MapsAndStages.EMap.Graveyard) //TODO to test

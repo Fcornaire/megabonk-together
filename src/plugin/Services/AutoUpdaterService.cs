@@ -132,6 +132,12 @@ namespace MegabonkTogether.Common
 
         public async Task<bool> CheckAndUpdate()
         {
+            if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Linux))
+            {
+                logger.LogInfo("Auto-updater is disabled on Linux.");
+                return false;
+            }
+
             if (isUpdateAvailable)
             {
                 return true;
@@ -497,6 +503,11 @@ namespace MegabonkTogether.Common
 
         public void LaunchUpdaterOnExit(string pluginDirectory)
         {
+            if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Linux))
+            {
+                return;
+            }
+
             if (isThunderstoreBuild)
             {
                 logger.LogInfo("Thunderstore build - updater launch is disabled");
