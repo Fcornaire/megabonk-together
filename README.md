@@ -43,6 +43,10 @@ More info at [Notable Network Changes](./NETPLAY_CHANGES.md)
 <details>
 <summary>📋 Click to view full changelog</summary>
 
+### v4.2.0
+
+- 🚀 **More code omptimizations again !**
+
 ### v4.1.0
 
 - 🚀 **More improvements to tackle FPS issues**
