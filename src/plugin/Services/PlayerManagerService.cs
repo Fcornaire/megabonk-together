@@ -63,6 +63,7 @@ namespace MegabonkTogether.Services
         void SetSeed(int seed);
         public int GetSeed();
         public bool IsRemotePlayerHealth(PlayerHealth instance);
+        public bool IsRemoteTomeInventory(TomeInventory instance);
         public bool IsANetPlayerAbility(PassiveAbilityBullseye instance);
         public bool IsRemoteItem(ItemGhost instance);
         public void RemovePlayer(uint clientConnectionId);
@@ -106,6 +107,17 @@ namespace MegabonkTogether.Services
                 return false;
             }
             return instance != player.inventory.playerHealth;
+        }
+
+        public bool IsRemoteTomeInventory(TomeInventory instance)
+        {
+            var player = GameManager.Instance.player;
+            if (player == null || player.inventory == null)
+            {
+                logger.LogWarning("Local player or inventory is null when checking remote TomeInventory.");
+                return false;
+            }
+            return instance != player.inventory.tomeInventory;
         }
 
         public IEnumerable<Player> GetAllNonHostPlayers()

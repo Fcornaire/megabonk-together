@@ -45,7 +45,8 @@ More info at [Notable Network Changes](./NETPLAY_CHANGES.md)
 
 ### v4.2.0
 
-- 🚀 **More code omptimizations again !**
+- 🚀 **More code optimizations again !**
+- 🧩 **Some items fixes**: Prevent Soul Harvester / Chaos tome triggering even when not owned
 
 ### v4.1.0
 

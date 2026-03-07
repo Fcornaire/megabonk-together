@@ -8,7 +8,8 @@
 
 [version."4.2.0"]
 changes = [
-    "More code omptimizations again !"
+    "More code optimizations again !",
+    "Some items fixes : Prevent Soul Harvester / Chaos tome triggering even when not owned"
 ]
 
 [version."4.1.0"]

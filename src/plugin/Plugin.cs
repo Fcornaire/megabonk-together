@@ -78,6 +78,7 @@ namespace MegabonkTogether
         public bool CAN_DAMAGE_ENEMIES = false;
         public bool IS_HOST_READY = false;
         public bool IS_MANUAL_INVINCIBLE = false;
+        public bool IS_NETPLAYER_ADDING_TOME = false;
 
         public uint? CurrentReviver = null;
         public uint? CurrentReviverOwner = null;
