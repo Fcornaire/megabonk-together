@@ -111,10 +111,16 @@ namespace MegabonkTogether.Scripts.Snapshot
 
         private void CleanupOldSnapshots(List<ProjectileSnapshot> buffer, double renderTime)
         {
-            while (buffer.Count > 2 &&
-                   buffer[0].Timestamp < renderTime - interpolationDelayMs)
+            int removeCount = 0;
+            while (removeCount < buffer.Count - 2 &&
+                   buffer[removeCount].Timestamp < renderTime - interpolationDelayMs)
             {
-                buffer.RemoveAt(0);
+                removeCount++;
+            }
+
+            if (removeCount > 0)
+            {
+                buffer.RemoveRange(0, removeCount);
             }
         }
 

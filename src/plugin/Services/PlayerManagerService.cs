@@ -72,7 +72,7 @@ namespace MegabonkTogether.Services
     {
         private readonly ConcurrentDictionary<uint, Player> players = new();
         private readonly ManualLogSource logger;
-        private ConcurrentDictionary<uint, GameObject> spawnedPlayers = [];
+        private ConcurrentDictionary<uint, NetPlayer> spawnedPlayers = [];
         private uint localConnectionId = 0;
         private bool isLocalPlayerSet = false;
         private bool hasSelectedCharacter = false;
@@ -140,13 +140,12 @@ namespace MegabonkTogether.Services
         public IEnumerable<(uint, Rigidbody)> GetConnectionIdsAndRigidBodies()
         {
             var result = new List<(uint, Rigidbody)>();
-            foreach (var netPlayerObject in spawnedPlayers)
+            foreach (var kvp in spawnedPlayers)
             {
-                var netPlayer = netPlayerObject.Value.GetComponent<NetPlayer>();
+                var netPlayer = kvp.Value;
                 if (netPlayer != null)
                 {
-                    var rigidbody = netPlayer.Rigidbody;
-                    result.Add((netPlayer.ConnectionId, rigidbody));
+                    result.Add((netPlayer.ConnectionId, netPlayer.Rigidbody));
                 }
             }
 
@@ -218,8 +217,10 @@ namespace MegabonkTogether.Services
                 return;
             }
 
-            spawnedPlayers.TryRemove(connectionId, out var toDelete);
-            GameObject.Destroy(toDelete);
+            if (spawnedPlayers.TryRemove(connectionId, out var toDelete))
+            {
+                GameObject.Destroy(toDelete.gameObject);
+            }
 
             CleanQueue(projectileToSpawnQueue, connectionId);
             CleanQueue(getNetplayerPositionQueue, connectionId);
@@ -275,16 +276,16 @@ namespace MegabonkTogether.Services
 
             foreach (var other in others)
             {
-                var netplayer = new GameObject($"NetPlayer-{other.ConnectionId}");
-                var player = netplayer.AddComponent<NetPlayer>();
-                spawnedPlayers.TryAdd(other.ConnectionId, netplayer);
+                var go = new GameObject($"NetPlayer-{other.ConnectionId}");
+                var player = go.AddComponent<NetPlayer>();
+                spawnedPlayers.TryAdd(other.ConnectionId, player);
                 player.Initialize((ECharacter)other.Character, other.ConnectionId, other.Skin);
             }
         }
 
         public IEnumerable<NetPlayer> GetAllSpawnedNetPlayers()
         {
-            return spawnedPlayers.Select(p => p.Value.GetComponent<NetPlayer>()).ToList();
+            return [.. spawnedPlayers.Values];
         }
 
         public NetPlayer GetRandomNetPlayer()
@@ -295,8 +296,7 @@ namespace MegabonkTogether.Services
                 return null;
             }
             var randomIndex = UnityEngine.Random.Range(0, spawnedPlayers.Count);
-            var randomPlayerObject = spawnedPlayers.ElementAt(randomIndex);
-            return randomPlayerObject.Value.GetComponent<NetPlayer>();
+            return spawnedPlayers.ElementAt(randomIndex).Value;
 
         }
 
@@ -312,10 +312,12 @@ namespace MegabonkTogether.Services
 
         public NetPlayer GetNetPlayerByNetplayId(uint connectionId)
         {
-            return spawnedPlayers
-                .Where(p => p.Value != null && p.Value.GetComponent<NetPlayer>() != null)
-                .Select(p => p.Value.GetComponent<NetPlayer>())
-                .FirstOrDefault(np => np.ConnectionId == connectionId);
+            if (spawnedPlayers.TryGetValue(connectionId, out var netPlayer))
+            {
+                return netPlayer;
+            }
+
+            return null;
         }
 
         public void AddGetNetplayerPosition(uint connectionId)
@@ -407,8 +409,7 @@ namespace MegabonkTogether.Services
 
         public NetPlayer GetNetPlayerByWeapon(WeaponBase weapon)
         {
-            return spawnedPlayers
-                .Select(p => p.Value.GetComponent<NetPlayer>())
+            return spawnedPlayers.Values
                 .FirstOrDefault(np => np.Inventory.weaponInventory.weapons.ContainsValue(weapon));
         }
 
@@ -491,7 +492,7 @@ namespace MegabonkTogether.Services
         public void Reset()
         {
             players.Clear();
-            spawnedPlayers.ToList().ForEach(p => GameObject.Destroy(p.Value));
+            spawnedPlayers.ToList().ForEach(p => GameObject.Destroy(p.Value.gameObject));
             spawnedPlayers.Clear();
             projectileToSpawnQueue.Clear();
             getNetplayerPositionQueue.Clear();

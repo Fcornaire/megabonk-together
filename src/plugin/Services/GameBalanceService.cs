@@ -138,7 +138,7 @@ namespace MegabonkTogether.Services
             var xpValue = GetPickupXpValue();
 
             Plugin.Log.LogInfo($"[GameBalance] Initialized for {PlayersCount} players, Stage {StageIndex + 1}, Difficulty: {GetDifficultyLevelByPlayers()}");
-            Plugin.Log.LogInfo($"[GameBalance] Credits Timer Multiplier: {creditsMultiplier:F2}x");
+            Plugin.Log.LogInfo($"[GameBalance] Credits Timer Multiplier (Disabled): {creditsMultiplier:F2}x");
             Plugin.Log.LogInfo($"[GameBalance] Basic Enemy HP Base Multiplier: {enemyHpMultiplier:F2}x");
             Plugin.Log.LogInfo($"[GameBalance] Free Chest Spawn Rate Multiplier: {chestSpawnMultiplier:F2}x");
 

@@ -119,10 +119,16 @@ namespace MegabonkTogether.Scripts.Snapshot
 
         protected void CleanupOldSnapshots(double renderTime)
         {
-            while (snapshotsBuffer.Count > 2 &&
-                   snapshotsBuffer[0].Timestamp < renderTime - interpolationDelayMs)
+            int removeCount = 0;
+            while (removeCount < snapshotsBuffer.Count - 2 &&
+                   snapshotsBuffer[removeCount].Timestamp < renderTime - interpolationDelayMs)
             {
-                snapshotsBuffer.RemoveAt(0);
+                removeCount++;
+            }
+
+            if (removeCount > 0)
+            {
+                snapshotsBuffer.RemoveRange(0, removeCount);
             }
         }
     }

@@ -29,7 +29,7 @@ namespace MegabonkTogether.Services
     internal class ProjectileManagerService : IProjectileManagerService
     {
         private readonly ConcurrentDictionary<uint, ProjectileBase> spawnedProjectile = [];
-        private List<Projectile> previousSpawnedProjectilesDelta = [];
+        private Dictionary<uint, Projectile> previousSpawnedProjectilesDelta = [];
         private uint currentProjectileId = 0;
         private ProjectileInterpolator projectileInterpolator;
 
@@ -47,7 +47,7 @@ namespace MegabonkTogether.Services
 
             if (previousSpawnedProjectilesDelta.Count == 0)
             {
-                previousSpawnedProjectilesDelta = [.. currentProjectiles];
+                previousSpawnedProjectilesDelta = currentProjectiles.ToDictionary(p => p.Id);
                 return currentProjectiles;
             }
 
@@ -55,15 +55,13 @@ namespace MegabonkTogether.Services
 
             foreach (var current in currentProjectiles)
             {
-                var previous = previousSpawnedProjectilesDelta.FirstOrDefault(p => p.Id == current.Id);
-
-                if (previous == null || HasDelta(previous, current))
+                if (!previousSpawnedProjectilesDelta.TryGetValue(current.Id, out var previous) || HasDelta(previous, current))
                 {
                     deltas.Add(current);
                 }
             }
 
-            previousSpawnedProjectilesDelta = currentProjectiles.ToList();
+            previousSpawnedProjectilesDelta = currentProjectiles.ToDictionary(p => p.Id);
 
             return deltas;
         }
@@ -128,7 +126,7 @@ namespace MegabonkTogether.Services
         {
             currentProjectileId = 0;
             spawnedProjectile.Clear();
-            previousSpawnedProjectilesDelta.Clear();
+            previousSpawnedProjectilesDelta = [];
 
             if (projectileInterpolator != null)
             {

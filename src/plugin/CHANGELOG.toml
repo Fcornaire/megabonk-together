@@ -6,6 +6,11 @@
 #     "Change 2 description",
 # ]
 
+[version."4.2.0"]
+changes = [
+    "More code omptimizations again !"
+]
+
 [version."4.1.0"]
 changes = [
     "More improvements to tackle FPS issues"
