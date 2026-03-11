@@ -20,6 +20,11 @@
     <DefineConstants>$(DefineConstants);THUNDERSTORE</DefineConstants>
   </PropertyGroup>
 
+  <!-- Define PROTON when PROTON_BUILD environment variable is set (For Linux/Proton builds) -->
+  <PropertyGroup Condition=" '$(PROTON_BUILD)' == 'true' ">
+    <DefineConstants>$(DefineConstants);PROTON</DefineConstants>
+  </PropertyGroup>
+
 	<PropertyGroup>
 		<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
 	</PropertyGroup>

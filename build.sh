@@ -22,7 +22,8 @@ if [ ! -f "Directory.Build.props" ]; then
 EOF
 fi
 
-# Build the project
+# Build the project with PROTON constant defined
+export PROTON_BUILD=true
 dotnet build
 
 echo "Build complete!"

@@ -68,8 +68,13 @@ namespace MegabonkTogether.Common
 
 #if THUNDERSTORE
         private bool isThunderstoreBuild = true;
+        private string buildType = "Thunderstore";
+#elif PROTON
+        private bool isThunderstoreBuild = true;
+        private string buildType = "Proton";
 #else
         private bool isThunderstoreBuild = false;
+        private string buildType = "Standard";
 #endif
 
         public AutoUpdaterService(ManualLogSource logger)
@@ -132,12 +137,6 @@ namespace MegabonkTogether.Common
 
         public async Task<bool> CheckAndUpdate()
         {
-            if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Linux))
-            {
-                logger.LogInfo("Auto-updater is disabled on Linux.");
-                return false;
-            }
-
             if (isUpdateAvailable)
             {
                 return true;
@@ -173,7 +172,7 @@ namespace MegabonkTogether.Common
 
                     if (isThunderstoreBuild)
                     {
-                        logger.LogInfo("Thunderstore build detected - update download is disabled. Please update through Thunderstore.");
+                        logger.LogInfo($"{buildType} build detected - update download is disabled. Please update through {buildType}.");
                         isUpdateAvailable = true;
                         downloadedVersion = latestRelease.TagName;
                         return true;
@@ -503,14 +502,9 @@ namespace MegabonkTogether.Common
 
         public void LaunchUpdaterOnExit(string pluginDirectory)
         {
-            if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Linux))
-            {
-                return;
-            }
-
             if (isThunderstoreBuild)
             {
-                logger.LogInfo("Thunderstore build - updater launch is disabled");
+                logger.LogInfo($"{buildType} build - updater launch is disabled");
                 return;
             }
 
