@@ -80,7 +80,7 @@ namespace MegabonkTogether.Services
 
         public void OnSpawnedEnemy(Enemy enemy, EEnemy enemyName, Vector3 position, int waveNumber, bool forceSpawn, EEnemyFlag flag, bool canBeElite, float extraSizeMultiplier);
         public void OnSelectedCharacter();
-        public void OnEnemyDied(Enemy instance, uint? ownerId = null);
+        public void OnEnemyDied(Enemy instance, DamageContainer dc = null, uint? ownerId = null);
         public void OnSpawnedProjectile(Il2CppObjectBase instance, uint? owner = null);
         public void OnProjectileDone(ProjectileBase instance);
         public void OnPickupOrbSpawned(EPickup ePickup, Vector3 pos);
@@ -142,6 +142,7 @@ namespace MegabonkTogether.Services
         private readonly IFinalBossOrbManagerService finalBossOrbManagerService;
         private readonly IGameBalanceService gameBalanceService;
         private readonly IEncounterService encounterService;
+        private readonly ITrackerService trackerService;
         private readonly ManualLogSource logger;
         private readonly ConcurrentBag<SpawnedObject> toSpawns = [];
         private readonly ConcurrentBag<SpawnedObjectInCrypt> toUpdate = [];
@@ -167,7 +168,8 @@ namespace MegabonkTogether.Services
             ISpawnedObjectManagerService spawnedObjectManagerService,
             IFinalBossOrbManagerService finalBossOrbManagerService,
             IGameBalanceService gameBalanceService,
-            IEncounterService encounterService
+            IEncounterService encounterService,
+            ITrackerService trackerService
             )
         {
             this.playerManagerService = playerManagerService;
@@ -179,6 +181,7 @@ namespace MegabonkTogether.Services
             this.finalBossOrbManagerService = finalBossOrbManagerService;
             this.gameBalanceService = gameBalanceService;
             this.encounterService = encounterService;
+            this.trackerService = trackerService;
             this.logger = logger;
 
             EventManager.SubscribeSpawnedObjectsEvents(OnNewObjectToSpawn);
@@ -1485,18 +1488,23 @@ namespace MegabonkTogether.Services
                 crit = damaged.DamageIsCrit,
                 element = (EElement)damaged.DamageElement,
                 flags = (DcFlags)damaged.DamageFlags,
-                knockback = damaged.DamageKnockback
+                knockback = damaged.DamageKnockback,
+                damageSource = damaged.DamageSource
             };
 
             Plugin.Instance.CAN_DAMAGE_ENEMIES = true;
             playerManagerService.AddGetNetplayerPositionRequest(damaged.AttackerId);
+            trackerService.SetCurrentPlayerId(damaged.AttackerId);
+
             enemy.Damage(damageContainer);
+
+            trackerService.UnsetCurrentPlayerId();
             playerManagerService.UnqueueNetplayerPositionRequest();
             Plugin.Instance.CAN_DAMAGE_ENEMIES = false;
         }
 
 
-        public void OnEnemyDied(Enemy enemy, uint? diedByOwnerId = null)
+        public void OnEnemyDied(Enemy enemy, DamageContainer dc = null, uint? diedByOwnerId = null)
         {
             var enemySpawned = enemyManagerService.GetEnemyByReference(enemy);
             if (enemySpawned.Value == null)
@@ -1507,10 +1515,14 @@ namespace MegabonkTogether.Services
 
             enemyManagerService.RemoveEnemyById(enemySpawned.Key);
 
+            var procCoefficient = dc != null ? dc.procCoefficient : 0f;
+
             IGameNetworkMessage message = new EnemyDied
             {
                 EnemyId = enemySpawned.Key,
-                DiedByOwnerId = diedByOwnerId ?? playerManagerService.GetLocalPlayer().ConnectionId
+                DiedByOwnerId = diedByOwnerId ?? playerManagerService.GetLocalPlayer().ConnectionId,
+                DamageProcCoefficient = procCoefficient,
+                DamageSource = dc != null ? dc.damageSource : string.Empty
             };
 
             var isHost = IsServerMode() ?? false;
@@ -1537,19 +1549,34 @@ namespace MegabonkTogether.Services
                 return;
             }
 
-            var damageContainer = new DamageContainer(0.0f, ""); //TODO track dmgContainer ?
-            damageContainer.damage = enemy.hp + 1;
+            var damageContainer = new DamageContainer(0.0f, died.DamageSource)
+            {
+                damage = enemy.hp + 1,
+                enemy = enemy
+            }; //TODO track dmgContainer ?
 
-            DynamicData.For(enemy).Set("ownerId", died.DiedByOwnerId);
-            DynamicData.For(damageContainer).Set("ownerId", died.DiedByOwnerId);
+            damageContainer.procCoefficient = died.DamageProcCoefficient;
 
             Plugin.CAN_SEND_MESSAGES = false;
+            trackerService.SetCurrentPlayerId(died.DiedByOwnerId);
+
             enemy.EnemyDied(damageContainer);
+
+            trackerService.UnsetCurrentPlayerId();
             Plugin.CAN_SEND_MESSAGES = true;
 
             var isHost = IsServerMode() ?? false;
             if (!isHost)
             {
+                if (playerManagerService.IsLocalConnectionId(died.DiedByOwnerId))
+                {
+                    foreach (var item in GameManager.Instance.player.inventory.itemInventory.items)
+                    {
+                        var actualItem = item.Value;
+                        actualItem.ProcOnHitEffects(damageContainer);
+                    }
+                }
+
                 if (enemy.IsStageBoss() && !enemy.IsFinalBoss()) //Manually invoke boss defeated event client side
                 {
                     OnBossDefeated();

@@ -6,6 +6,11 @@
 #     "Change 2 description",
 # ]
 
+[version."4.2.1"]
+changes = [
+    "Reworked damage calculation: Some items/projectiles were not applying damage correctly. This is now globally resolved (some items still have issues, will try to fix later)",
+]
+
 [version."4.2.0"]
 changes = [
     "More code optimizations again !",

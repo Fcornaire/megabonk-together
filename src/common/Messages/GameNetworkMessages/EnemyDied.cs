@@ -8,5 +8,7 @@ namespace MegabonkTogether.Common.Messages
         public uint EnemyId { get; set; }
 
         public uint DiedByOwnerId { get; set; }
+        public float DamageProcCoefficient { get; set; }
+        public string DamageSource { get; set; }
     }
 }

@@ -1146,9 +1146,11 @@ namespace MegabonkTogether.Services
             pollingCancelationTokenSource = new CancellationTokenSource();
             var token = pollingCancelationTokenSource.Token;
 
+            var initialPollCts = new CancellationTokenSource();
+
             var pollTask = Task.Run(async () =>
             {
-                while (!token.IsCancellationRequested)
+                while (!token.IsCancellationRequested && !initialPollCts.IsCancellationRequested)
                 {
                     bool relayConnected;
                     lock (relayPeerLock)
@@ -1160,15 +1162,15 @@ namespace MegabonkTogether.Services
                     await Task.Delay(POLL_INTERVAL_MS);
                 }
 
-                if (token.IsCancellationRequested)
+                if (token.IsCancellationRequested || initialPollCts.IsCancellationRequested)
                 {
                     hasAllPeersConnected = false;
-                    natPunchComplete.SetResult(false);
+                    natPunchComplete.TrySetResult(false);
                     return;
                 }
 
                 hasAllPeersConnected = expectedPeerCount > 0 && gamePeers.Count + usesRelay.Count >= expectedPeerCount && (!usesRelay.Any() || relayPeer != null);
-                natPunchComplete.SetResult(hasAllPeersConnected);
+                natPunchComplete.TrySetResult(hasAllPeersConnected);
             });
 
             isHandlingConnection = true;
@@ -1202,6 +1204,8 @@ namespace MegabonkTogether.Services
                     logger.LogWarning($"P2P connection timeout - only {gamePeers.Count + usesRelay.Count}/{expectedPeerCount} peers connected, retrying with forced relay mode...");
                     hasTriedForceRelay = true;
 
+                    initialPollCts.Cancel();
+
                     var forceRelayToken = $"{role}|{hostId}|{selfConnectionId}|force_relay";
                     logger.LogInfo($"Sending NAT punch request with force relay: {forceRelayToken}");
                     netManager.NatPunchModule.SendNatIntroduceRequest(rdvServerHost, (int)rdvServerPort, forceRelayToken);
@@ -1226,12 +1230,12 @@ namespace MegabonkTogether.Services
                         if (token.IsCancellationRequested)
                         {
                             hasAllPeersConnected = false;
-                            natPunchComplete.SetResult(false);
+                            natPunchComplete.TrySetResult(false);
                             return;
                         }
 
                         hasAllPeersConnected = expectedPeerCount > 0 && gamePeers.Count + usesRelay.Count >= expectedPeerCount && (!usesRelay.Any() || relayPeer != null);
-                        natPunchComplete.SetResult(hasAllPeersConnected);
+                        natPunchComplete.TrySetResult(hasAllPeersConnected);
                     });
 
                     var retryTimeoutTask = Task.Delay(10000);

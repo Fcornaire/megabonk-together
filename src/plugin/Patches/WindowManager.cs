@@ -93,7 +93,7 @@ namespace MegabonkTogether.Patches
             }
             else
             {
-                if (friendliesInfoDisplay != null)
+                if (friendliesInfoDisplay)
                 {
                     DestroyFriendliesInfoDisplay();
                 }
@@ -145,39 +145,42 @@ namespace MegabonkTogether.Patches
                 }
             }
 
-            if (WindowManager.activeWindow?.name == "Maps And Stats" && Plugin.Instance.Mode.Mode == NetworkModeType.Friendlies && Plugin.Instance.Mode.Role == Role.Host)
+            if (WindowManager.activeWindow?.name == "Maps And Stats")
             {
-                var mainMenu = Plugin.Instance.GetMainMenu();
-
-                var confirmButton = mainMenu.mapSelectionUi.btnConfirm;
-
-                if (confirmButton == null) return;
-
-                if (playerManagerService.GetAllPlayers().Count() < 2 || !udpClientService.AreAllPeersReady() || udpClientService.IsHandlingConnection())
+                if (Plugin.Instance.Mode.Mode == NetworkModeType.Friendlies && Plugin.Instance.Mode.Role == Role.Host)
                 {
-                    confirmButton.state = MyButton.EButtonState.Inactive;
-                    confirmButton.RefreshState();
+                    var mainMenu = Plugin.Instance.GetMainMenu();
 
-                    if (readyStatusDisplay == null)
+                    var confirmButton = mainMenu.mapSelectionUi.btnConfirm;
+
+                    if (confirmButton == null) return;
+
+                    if (playerManagerService.GetAllPlayers().Count() < 2 || !udpClientService.AreAllPeersReady() || udpClientService.IsHandlingConnection())
                     {
-                        CreateReadyStatusDisplay(mainMenu.tabMaps.transform);
-                    }
+                        confirmButton.state = MyButton.EButtonState.Inactive;
+                        confirmButton.RefreshState();
 
-                    UpdateReadyStatusDisplay();
+                        if (!readyStatusDisplay)
+                        {
+                            CreateReadyStatusDisplay(mainMenu.tabMaps.transform);
+                        }
+
+                        UpdateReadyStatusDisplay();
+                    }
+                    else
+                    {
+                        confirmButton.state = MyButton.EButtonState.Active;
+                        confirmButton.RefreshState();
+
+                        DestroyReadyStatusDisplay();
+                    }
                 }
                 else
                 {
-                    confirmButton.state = MyButton.EButtonState.Active;
-                    confirmButton.RefreshState();
-
-                    DestroyReadyStatusDisplay();
-                }
-            }
-            else
-            {
-                if (readyStatusDisplay != null)
-                {
-                    DestroyReadyStatusDisplay();
+                    if (readyStatusDisplay)
+                    {
+                        DestroyReadyStatusDisplay();
+                    }
                 }
             }
         }
@@ -305,7 +308,7 @@ namespace MegabonkTogether.Patches
 
         private static void DestroyFriendliesInfoDisplay()
         {
-            if (friendliesInfoDisplay != null)
+            if (friendliesInfoDisplay)
             {
                 GameObject.Destroy(friendliesInfoDisplay);
                 friendliesInfoDisplay = null;
@@ -347,7 +350,7 @@ namespace MegabonkTogether.Patches
 
         private static void UpdateReadyStatusDisplay()
         {
-            if (readyStatusDisplay == null) return;
+            if (!readyStatusDisplay) return;
 
             var textObj = readyStatusDisplay.transform.Find("StatusText");
             if (textObj == null) return;
@@ -363,7 +366,7 @@ namespace MegabonkTogether.Patches
 
         private static void DestroyReadyStatusDisplay()
         {
-            if (readyStatusDisplay != null)
+            if (readyStatusDisplay)
             {
                 GameObject.Destroy(readyStatusDisplay);
                 readyStatusDisplay = null;

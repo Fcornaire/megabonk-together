@@ -43,6 +43,10 @@ More info at [Notable Network Changes](./NETPLAY_CHANGES.md)
 <details>
 <summary>📋 Click to view full changelog</summary>
 
+### v4.2.1
+
+- 🛠️ **Reworked damage calculation**: Some items/projectiles were not applying damage correctly. This is now globally resolved (some items still have issues, will try to fix later)
+
 ### v4.2.0
 
 - 🚀 **More code optimizations again !**

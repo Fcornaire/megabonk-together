@@ -4,7 +4,6 @@ using Assets.Scripts.Saves___Serialization.Progression.Stats;
 using HarmonyLib;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
-using MonoMod.Utils;
 
 namespace MegabonkTogether.Patches
 {
@@ -13,9 +12,10 @@ namespace MegabonkTogether.Patches
     {
         private static readonly ISynchronizationService synchronizationService = Plugin.Services.GetService<ISynchronizationService>();
         private static readonly IPlayerManagerService playerManagerService = Plugin.Services.GetRequiredService<IPlayerManagerService>();
+        private static readonly ITrackerService trackerService = Plugin.Services.GetRequiredService<ITrackerService>();
 
         /// <summary>
-        ///  Track stats per player
+        ///  Track stats per player (Skip for remote kill)
         /// </summary>
         [HarmonyPrefix]
         [HarmonyPatch(nameof(TrackStats.OnEnemyDied))]
@@ -26,16 +26,14 @@ namespace MegabonkTogether.Patches
                 return true;
             }
 
-            var ownerId = DynamicData.For(deathSource).Get<uint?>("ownerId");
-            if (!ownerId.HasValue)
-            {
-                ownerId = DynamicData.For(enemy).Get<uint?>("ownerId");
-            }
+            var tracks = trackerService.GetPlayerTrack();
 
-            if (ownerId.HasValue && playerManagerService.IsRemoteConnectionId(ownerId.Value))
+            if (tracks.kills == 0)
             {
                 return false;
             }
+
+            tracks.kills--;
 
             return true;
         }

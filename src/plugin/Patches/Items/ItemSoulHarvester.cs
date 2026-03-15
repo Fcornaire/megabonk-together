@@ -11,9 +11,10 @@ namespace MegabonkTogether.Patches.Items
     {
         private static readonly ISynchronizationService synchronizationService = Plugin.Services.GetService<ISynchronizationService>();
         private static readonly IPlayerManagerService playerManagerService = Plugin.Services.GetService<IPlayerManagerService>();
+        private static readonly ITrackerService trackerService = Plugin.Services.GetService<ITrackerService>();
 
         /// <summary>
-        /// Prevent triggering SoulHarvester effect if not owned by the local player.
+        /// Prevent triggering SoulHarvester effect if not owned by the local player or not local kill 
         /// </summary>
         [HarmonyPrefix]
         [HarmonyPatch(nameof(ItemSoulHarvester.OnEnemyDied))]
@@ -28,7 +29,16 @@ namespace MegabonkTogether.Patches.Items
             {
                 return false;
             }
-            
+
+            var tracks = trackerService.GetPlayerTrack();
+
+            if (tracks.itemProcs == 0)
+            {
+                return false;
+            }
+
+            tracks.itemProcs--;
+
             return true;
         }
     }
