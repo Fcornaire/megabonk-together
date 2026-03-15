@@ -153,6 +153,7 @@ namespace MegabonkTogether
                 services.AddSingleton<IAutoUpdaterService, AutoUpdaterService>();
                 services.AddSingleton<IChangelogService, ChangelogService>();
                 services.AddSingleton<IEncounterService, EncounterService>();
+                services.AddSingleton<ITrackerService, TrackerService>();
             });
 
             Host = builder.Build();

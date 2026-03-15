@@ -1,6 +1,7 @@
 ﻿using Assets.Scripts.Inventory__Items__Pickups.Weapons.Projectiles;
 using Assets.Scripts.Objects.Particles___Effects.ParticleOpacity;
 using HarmonyLib;
+using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
 using MonoMod.Utils;
 
@@ -9,9 +10,10 @@ namespace MegabonkTogether.Patches.Projectiles
     [HarmonyPatch(typeof(ProjectileBase))]
     internal class ProjectileBasePatches
     {
-        private static readonly Services.ISynchronizationService synchronizationService = Plugin.Services.GetService<Services.ISynchronizationService>();
-        private static readonly Services.IPlayerManagerService playerManagerService = Plugin.Services.GetService<Services.IPlayerManagerService>();
-        private static readonly Services.IProjectileManagerService projectileManagerService = Plugin.Services.GetService<Services.IProjectileManagerService>();
+        private static readonly ISynchronizationService synchronizationService = Plugin.Services.GetService<ISynchronizationService>();
+        private static readonly IPlayerManagerService playerManagerService = Plugin.Services.GetService<IPlayerManagerService>();
+        private static readonly IProjectileManagerService projectileManagerService = Plugin.Services.GetService<IProjectileManagerService>();
+        private static readonly ITrackerService trackerService = Plugin.Services.GetService<ITrackerService>();
 
         /// <summary>
         /// Make sure to spawn projectiles at the net player's position
@@ -48,7 +50,7 @@ namespace MegabonkTogether.Patches.Projectiles
 
 
         /// <summary>
-        /// Ignore HitEnemy for projectiles on clients (Simulated by server)
+        /// Ignore HitEnemy for projectiles on clients (Simulated by server). Also track which player is hitting the enemy for stats tracking (money flying, item procs, kills)
         /// </summary>
         [HarmonyPrefix]
         [HarmonyPatch(nameof(ProjectileBase.HitEnemy))]
@@ -61,7 +63,32 @@ namespace MegabonkTogether.Patches.Projectiles
 
             var isServer = synchronizationService.IsServerMode() ?? false;
 
+            if (isServer)
+            {
+                var owner = playerManagerService.GetNetPlayerByWeapon(__instance.weaponBase);
+                if (owner != null)
+                {
+                    trackerService.SetCurrentPlayerId(owner.ConnectionId);
+                }
+            }
+
             return isServer;
+        }
+
+
+        /// <summary>
+        /// Remove the tracking
+        /// </summary>
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(ProjectileBase.HitEnemy))]
+        public static void HitEnemy_Postfix(ProjectileBase __instance)
+        {
+            if (!synchronizationService.HasNetplaySessionStarted())
+            {
+                return;
+            }
+
+            trackerService.UnsetCurrentPlayerId();
         }
 
 

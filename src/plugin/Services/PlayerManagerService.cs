@@ -504,7 +504,14 @@ namespace MegabonkTogether.Services
         public void Reset()
         {
             players.Clear();
-            spawnedPlayers.ToList().ForEach(p => GameObject.Destroy(p.Value.gameObject));
+            try
+            {
+                spawnedPlayers.ToList().ForEach(p => GameObject.Destroy(p.Value.gameObject));
+            }
+            catch (Exception ex)
+            {
+                logger.LogError($"Error while destroying spawned player game objects during reset: {ex}");
+            }
             spawnedPlayers.Clear();
             projectileToSpawnQueue.Clear();
             getNetplayerPositionQueue.Clear();

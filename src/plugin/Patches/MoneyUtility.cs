@@ -4,7 +4,6 @@ using Assets.Scripts.Inventory__Items__Pickups.GoldAndMoney;
 using HarmonyLib;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
-using MonoMod.Utils;
 
 namespace MegabonkTogether.Patches
 {
@@ -13,6 +12,7 @@ namespace MegabonkTogether.Patches
     {
         private static readonly ISynchronizationService synchronizationService = Plugin.Services.GetService<ISynchronizationService>();
         private static readonly IPlayerManagerService playerManagerService = Plugin.Services.GetService<IPlayerManagerService>();
+        private static readonly ITrackerService trackerService = Plugin.Services.GetService<ITrackerService>();
 
         /// <summary>
         /// Skip money flying if enemy was killed by another player
@@ -26,16 +26,14 @@ namespace MegabonkTogether.Patches
                 return true;
             }
 
-            var ownerId = DynamicData.For(deathSource).Get<uint?>("ownerId");
-            if (!ownerId.HasValue)
-            {
-                ownerId = DynamicData.For(enemy).Get<uint?>("ownerId");
-            }
 
-            if (ownerId.HasValue && playerManagerService.IsRemoteConnectionId(ownerId.Value))
+            var tracks = trackerService.GetPlayerTrack();
+            if (tracks.moneyFlying == 0)
             {
                 return false;
             }
+
+            tracks.moneyFlying--;
 
             return true;
         }

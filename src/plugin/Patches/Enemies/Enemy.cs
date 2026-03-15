@@ -1,11 +1,14 @@
 ﻿using Assets.Scripts.Actors;
 using Assets.Scripts.Actors.Enemies;
+using Assets.Scripts.Inventory__Items__Pickups.Items;
 using HarmonyLib;
 using MegabonkTogether.Helpers;
 using MegabonkTogether.Scripts.Enemies;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
 using MonoMod.Utils;
+using System;
+using System.Linq;
 using UnityEngine;
 
 namespace MegabonkTogether.Patches.Enemies
@@ -16,6 +19,9 @@ namespace MegabonkTogether.Patches.Enemies
         private static readonly ISynchronizationService synchronizationService = Plugin.Services.GetService<ISynchronizationService>();
         private static readonly IPlayerManagerService playerManagerService = Plugin.Services.GetService<IPlayerManagerService>();
         private static readonly IEnemyManagerService enemyManagerService = Plugin.Services.GetService<IEnemyManagerService>();
+        private static readonly ITrackerService trackerService = Plugin.Services.GetService<ITrackerService>();
+
+        public static readonly string[] AllowedDamageSource = Enum.GetNames(typeof(EItem));
 
         public static readonly DistanceThrottler EnemiesDistanceThrottler = new();
 
@@ -81,6 +87,24 @@ namespace MegabonkTogether.Patches.Enemies
         }
 
         /// <summary>
+        /// Manually register a local kill to properly track item procs, money flying and stats
+        /// </summary>
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(Enemy.EnemyDied), typeof(DamageContainer))]
+        public static void EnemyDied_Prefix(Enemy __instance)
+        {
+            if (!synchronizationService.HasNetplaySessionStarted())
+            {
+                return;
+            }
+
+            var currentTracker = trackerService.GetCurrentPlayerId();
+            if (currentTracker.HasValue && currentTracker.Value != playerManagerService.GetLocalPlayer().ConnectionId) { return; }
+
+            trackerService.RegisterTrack();
+        }
+
+        /// <summary>
         /// Synchronize enemy death
         /// </summary>
 
@@ -97,9 +121,26 @@ namespace MegabonkTogether.Patches.Enemies
             {
                 return;
             }
-            uint? ownerId = DynamicData.For(dc).Get<uint?>("ownerId");
 
-            synchronizationService.OnEnemyDied(__instance, ownerId);
+            synchronizationService.OnEnemyDied(__instance, dc, trackerService.GetCurrentPlayerId());
+        }
+
+        /// <summary>
+        /// Manually register a local kill to properly track item procs, money flying and stats
+        /// </summary>
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(Enemy.EnemyDied), [])]
+        public static void EnemyDiedWithoutDc_Prefix(Enemy __instance)
+        {
+            if (!synchronizationService.HasNetplaySessionStarted())
+            {
+                return;
+            }
+
+            var currentTracker = trackerService.GetCurrentPlayerId();
+            if (currentTracker.HasValue && currentTracker.Value != playerManagerService.GetLocalPlayer().ConnectionId) { return; }
+
+            trackerService.RegisterTrack();
         }
 
         /// <summary>
@@ -119,7 +160,7 @@ namespace MegabonkTogether.Patches.Enemies
                 return;
             }
 
-            synchronizationService.OnEnemyDied(__instance);
+            synchronizationService.OnEnemyDied(__instance, ownerId: trackerService.GetCurrentPlayerId());
         }
 
         /// <summary>
@@ -149,7 +190,7 @@ namespace MegabonkTogether.Patches.Enemies
         }
 
         /// <summary>
-        /// Synchronize enemy damage to all clients
+        /// Synchronize enemy damage to all clients, synchronize item damage for client
         /// </summary>
 
         [HarmonyPostfix]
@@ -162,12 +203,10 @@ namespace MegabonkTogether.Patches.Enemies
             }
 
             var isServer = synchronizationService.IsServerMode() ?? false;
-            if (!isServer)
+            if (isServer || AllowedDamageSource.Contains(damageContainer.damageSource))
             {
-                return;
+                synchronizationService.OnEnemyDamaged(__instance, damageContainer);
             }
-
-            synchronizationService.OnEnemyDamaged(__instance, damageContainer);
         }
 
         /// <summary>

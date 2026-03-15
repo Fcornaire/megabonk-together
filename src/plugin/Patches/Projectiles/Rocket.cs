@@ -22,12 +22,6 @@ namespace MegabonkTogether.Patches.Projectiles
                 return true;
             }
 
-            var isHost = synchronizationService.IsServerMode() ?? false;
-            if (!isHost)
-            {
-                return false;
-            }
-
             var netPlayer = Plugin.Services.GetService<IPlayerManagerService>().GetNetPlayerByWeapon(__instance.weaponBase);
             if (netPlayer == null)
             {
