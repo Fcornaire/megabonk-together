@@ -43,6 +43,11 @@ More info at [Notable Network Changes](./NETPLAY_CHANGES.md)
 <details>
 <summary>📋 Click to view full changelog</summary>
 
+### v4.2.2
+
+- 🚀 **Attempt to fix FPS issues**: Less critical updates are now sent unreliably, which improves bandwidth and CPU usage
+- 🔧 **Attempt to fix some desync issues (Shared Experience)**: Some packets were dropped in some scenarios. Critical interactions are now sent reliably, which should prevent desync issues
+
 ### v4.2.1
 
 - 🛠️ **Reworked damage calculation**: Some items/projectiles were not applying damage correctly. This is now globally resolved (some items still have issues, will try to fix later)

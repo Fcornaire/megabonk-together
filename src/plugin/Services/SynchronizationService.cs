@@ -715,7 +715,7 @@ namespace MegabonkTogether.Services
                     {
                         ConnectionId = playerManagerService.GetLocalPlayer().ConnectionId
                     };
-                    udpClientService.SendToHost(message);
+                    udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
                     break;
                 case GameEvent.Start:
                     break;
@@ -1387,7 +1387,7 @@ namespace MegabonkTogether.Services
 
             if (!isHost)
             {
-                udpClientService.SendToHost(message);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
             }
             else
             {
@@ -1468,7 +1468,7 @@ namespace MegabonkTogether.Services
             }
             else
             {
-                udpClientService.SendToHost(message);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
             }
         }
 
@@ -1537,7 +1537,7 @@ namespace MegabonkTogether.Services
                     OnBossDefeated();
                 }
 
-                udpClientService.SendToHost(message);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
             }
         }
 
@@ -1629,7 +1629,7 @@ namespace MegabonkTogether.Services
             }
             else
             {
-                udpClientService.SendToHost(message);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
             }
         }
 
@@ -1732,7 +1732,7 @@ namespace MegabonkTogether.Services
             }
             else
             {
-                udpClientService.SendToHost(message);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
             }
         }
 
@@ -1872,7 +1872,7 @@ namespace MegabonkTogether.Services
                     OwnerId = playerManagerService.GetLocalPlayer().ConnectionId
                 };
 
-                udpClientService.SendToHost(message);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
             }
             else
             {
@@ -1976,7 +1976,7 @@ namespace MegabonkTogether.Services
             }
             else
             {
-                udpClientService.SendToHost(message);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
             }
         }
 
@@ -2029,7 +2029,7 @@ namespace MegabonkTogether.Services
             }
             else
             {
-                udpClientService.SendToHost(msg);
+                udpClientService.SendToHost(msg, LiteNetLib.DeliveryMethod.ReliableOrdered);
             }
         }
 
@@ -2098,7 +2098,7 @@ namespace MegabonkTogether.Services
             }
             else
             {
-                udpClientService.SendToHost(msg);
+                udpClientService.SendToHost(msg, LiteNetLib.DeliveryMethod.ReliableOrdered);
             }
         }
 
@@ -2269,7 +2269,7 @@ namespace MegabonkTogether.Services
                     currentCoffin.minibossEnemies = new Il2CppSystem.Collections.Generic.HashSet<Enemy>();
                 }
 
-                udpClientService.SendToHost(message);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
             }
 
             if (isPortal || instance.GetComponentInChildren<InteractableBossSpawnerFinal>() != null)
@@ -2706,7 +2706,7 @@ namespace MegabonkTogether.Services
 
             if (!isHost)
             {
-                udpClientService.SendToHost(message);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
                 return false;
             }
 
@@ -2799,7 +2799,7 @@ namespace MegabonkTogether.Services
 
             if (!isHost)
             {
-                udpClientService.SendToHost(message);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
                 return false;
             }
 
@@ -2901,7 +2901,7 @@ namespace MegabonkTogether.Services
             }
             else
             {
-                udpClientService.SendToHost(message);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
             }
         }
 
@@ -3005,7 +3005,7 @@ namespace MegabonkTogether.Services
 
             if (!isHost)
             {
-                udpClientService.SendToHost(message);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
                 return false;
             }
 
@@ -3098,7 +3098,7 @@ namespace MegabonkTogether.Services
 
             if (!isHost)
             {
-                udpClientService.SendToHost(message);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
                 return false;
             }
 
@@ -3193,7 +3193,7 @@ namespace MegabonkTogether.Services
 
             if (!isHost)
             {
-                udpClientService.SendToHost(message);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
                 return false;
             }
 
@@ -3284,7 +3284,7 @@ namespace MegabonkTogether.Services
 
             if (!isHost)
             {
-                udpClientService.SendToHost(message);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
                 return false;
             }
 
@@ -3479,7 +3479,7 @@ namespace MegabonkTogether.Services
             }
             else
             {
-                udpClientService.SendToHost(message);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
             }
         }
 
@@ -3547,7 +3547,7 @@ namespace MegabonkTogether.Services
 
             if (!isHost)
             {
-                udpClientService.SendToHost(diedMessage);
+                udpClientService.SendToHost(diedMessage, LiteNetLib.DeliveryMethod.ReliableOrdered);
             }
             else
             {
@@ -4017,7 +4017,7 @@ namespace MegabonkTogether.Services
                 NetplayId = netplayId.Value,
             };
 
-            udpClientService.SendToHost(message);
+            udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
         }
 
         private void OnReceivedInteractableFightEnemySpawned(InteractableCharacterFightEnemySpawned spawned)
@@ -4047,7 +4047,7 @@ namespace MegabonkTogether.Services
             }
             else
             {
-                udpClientService.SendToHost(message);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
             }
         }
 
@@ -4081,7 +4081,7 @@ namespace MegabonkTogether.Services
             }
             else
             {
-                udpClientService.SendToHost(message);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
             }
         }
 
@@ -4116,7 +4116,7 @@ namespace MegabonkTogether.Services
             }
             else
             {
-                udpClientService.SendToHost(message);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
             }
         }
 
@@ -4184,7 +4184,7 @@ namespace MegabonkTogether.Services
             }
             else
             {
-                udpClientService.SendToHost(message);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
             }
         }
 
@@ -4212,7 +4212,7 @@ namespace MegabonkTogether.Services
             }
             else
             {
-                udpClientService.SendToHost(message);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
             }
         }
 
@@ -4323,7 +4323,7 @@ namespace MegabonkTogether.Services
             }
             else
             {
-                udpClientService.SendToHost(message);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
 
             }
         }
@@ -4362,7 +4362,7 @@ namespace MegabonkTogether.Services
             }
             else
             {
-                udpClientService.SendToHost(message);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
             }
         }
 
@@ -4401,7 +4401,7 @@ namespace MegabonkTogether.Services
             }
             else
             {
-                udpClientService.SendToHost(message);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
             }
         }
 

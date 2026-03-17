@@ -49,7 +49,7 @@ namespace MegabonkTogether.Services
         public void SendToAllClients<T>(T data, DeliveryMethod deliveryMethod) where T : IGameNetworkMessage;
         public void SendToAllClients(byte[] data, DeliveryMethod deliveryMethod);
 
-        public void SendToHost<T>(T data) where T : IGameNetworkMessage;
+        public void SendToHost<T>(T data, DeliveryMethod? deliveryMethod = null) where T : IGameNetworkMessage;
         public void SendToClient<T>(NetPeer client, T data, uint netPlayerId) where T : IGameNetworkMessage;
         public void SendToAllClientsExcept<T>(int netPlayerId, uint sender, T data) where T : IGameNetworkMessage;
         public bool? IsHost();
@@ -1302,7 +1302,7 @@ namespace MegabonkTogether.Services
                     Plugin.Log.LogWarning("Local player update is null, cannot send to host");
                     return;
                 }
-                SendToHost(playerUpdate);
+                SendToHost(playerUpdate, DeliveryMethod.Unreliable);
             }
         }
 
@@ -1393,7 +1393,7 @@ namespace MegabonkTogether.Services
 
             byte[] serialized = MemoryPackSerializer.Serialize<IGameNetworkMessage>(message);
 
-            var deliveryMethod = DeliveryMethod.ReliableSequenced;
+            var deliveryMethod = DeliveryMethod.Unreliable;
 
             if (serialized.Length >= MAX_PACKET_SIZE_BYTES)
             {
@@ -1421,7 +1421,7 @@ namespace MegabonkTogether.Services
 
             byte[] serialized = MemoryPackSerializer.Serialize<IGameNetworkMessage>(message);
 
-            var deliveryMethod = DeliveryMethod.ReliableSequenced;
+            var deliveryMethod = DeliveryMethod.Unreliable;
 
             if (serialized.Length >= MAX_PACKET_SIZE_BYTES)
             {
@@ -1520,7 +1520,7 @@ namespace MegabonkTogether.Services
             }
         }
 
-        public void SendToHost<T>(T data) where T : IGameNetworkMessage
+        public void SendToHost<T>(T data, DeliveryMethod? overrideDeliveryMethod = null) where T : IGameNetworkMessage
         {
             if (!EnsureIsClient())
             {
@@ -1529,7 +1529,7 @@ namespace MegabonkTogether.Services
 
             var msgBytes = MemoryPackSerializer.Serialize<IGameNetworkMessage>(data);
 
-            var deliveryMethod = DeliveryMethod.ReliableSequenced;
+            var deliveryMethod = overrideDeliveryMethod ?? DeliveryMethod.ReliableSequenced;
 
             if (msgBytes.Length >= MAX_PACKET_SIZE_BYTES)
             {
