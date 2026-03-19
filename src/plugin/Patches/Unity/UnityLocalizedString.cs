@@ -15,7 +15,7 @@ namespace MegabonkTogether.Patches.Unity
         /// Use custom localization service to get localized string if needed (used in notification)
         /// </summary>
         [HarmonyPrefix]
-        [HarmonyPatch(nameof(LocalizedString.GetLocalizedString), [])]
+        [HarmonyPatch(nameof(LocalizedString.GetLocalizedString), new System.Type[0])]
         public static bool GetLocalizedString_Prefix(LocalizedString __instance, ref string __result)
         {
             var tableRef = __instance.TableReference?.TableCollectionName;
@@ -35,7 +35,7 @@ namespace MegabonkTogether.Patches.Unity
         /// Use custom localization service to get localized string if needed (used in notification)
         /// </summary>
         [HarmonyPrefix]
-        [HarmonyPatch(nameof(LocalizedString.GetLocalizedString), [typeof(Il2CppReferenceArray<Il2CppSystem.Object>)])]
+        [HarmonyPatch(nameof(LocalizedString.GetLocalizedString), new System.Type[] { typeof(Il2CppReferenceArray<Il2CppSystem.Object>) })]
         public static bool GetLocalizedString_WithArgs_Prefix(LocalizedString __instance, ref string __result)
         {
             var tableRef = __instance.TableReference?.TableCollectionName;
