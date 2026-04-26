@@ -23,7 +23,7 @@ namespace MegabonkTogether.Scripts.Modal
 
             CreateVersionText();
 
-            if (autoUpdaterService.IsThunderstoreBuild())
+            if (autoUpdaterService.IsCustomBuild())
             {
                 CreateCloseButton();
             }
@@ -59,9 +59,9 @@ namespace MegabonkTogether.Scripts.Modal
             rectTransform.sizeDelta = new Vector2(450, 120);
 
             var text = textObj.AddComponent<TextMeshProUGUI>();
-            if (autoUpdaterService.IsThunderstoreBuild())
+            if (autoUpdaterService.IsCustomBuild())
             {
-                text.text = $"Megabonk together Version {autoUpdaterService.GetDownloadedVersion()}\nis available!\nPlease update through Thunderstore mod manager.";
+                text.text = $"Megabonk together Version {autoUpdaterService.GetDownloadedVersion()}\nis available!\nPlease update through Thunderstore mod manager or Github if SteamDeck/Proton.";
             }
             else
             {
@@ -165,7 +165,7 @@ namespace MegabonkTogether.Scripts.Modal
         {
             AudioManager.Instance.PlaySfx(AudioManager.Instance.uiSelect.sounds[0]);
 
-            if (autoUpdaterService.IsThunderstoreBuild())
+            if (autoUpdaterService.IsCustomBuild())
             {
                 return;
             }

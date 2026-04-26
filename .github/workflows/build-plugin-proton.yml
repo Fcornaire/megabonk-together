@@ -1,0 +1,110 @@
+name: Build MegabonkTogether Plugin (Proton)
+
+on:
+  workflow_run:
+    workflows: ["Build MegabonkTogether Plugin"]
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to use for the release upload"
+        required: true
+        default: "1.0.0"
+
+permissions:
+  contents: write
+
+jobs:
+  build-proton:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Set version from tag
+        id: set_version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            git fetch --tags
+            VERSION=$(git tag --points-at ${{ github.event.workflow_run.head_sha }} | head -n1)
+            if [ -z "$VERSION" ]; then
+              echo "No tag found at this commit, skipping"
+              exit 1
+            fi
+            VERSION=${VERSION#v}
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "ARCHIVE_NAME=Megabonk-Together-Proton-${VERSION}.zip" >> $GITHUB_ENV
+          echo "Using version: $VERSION"
+
+      - name: Restore
+        run: dotnet restore src/plugin/MegabonkTogether.Plugin.csproj
+
+      - name: Build (Release) with PROTON flag
+        run: dotnet build src/plugin/MegabonkTogether.Plugin.csproj --configuration Release --no-restore
+        env:
+          PROTON_BUILD: "true"
+
+      - name: Create zip of DLLs
+        run: |
+          OUTPUT_DIR="src/plugin/bin/Release/net6.0"
+          mkdir -p artifacts
+          ZIP="artifacts/${ARCHIVE_NAME}"
+
+          echo "Zipping DLLs, PDBs from $OUTPUT_DIR into $ZIP"
+
+          shopt -s nullglob || true
+
+          FILES=()
+
+          for f in "$OUTPUT_DIR"/*.dll; do
+            [ -e "$f" ] && FILES+=("$f")
+          done
+
+          for f in "$OUTPUT_DIR"/*.pdb; do
+            [ -e "$f" ] && FILES+=("$f")
+          done
+
+          if [ ${#FILES[@]} -eq 0 ]; then
+            echo "No DLL, PDB files found to zip in $OUTPUT_DIR"
+            ls -la "$OUTPUT_DIR" || true
+            exit 1
+          fi
+
+          REPO_ROOT="$(pwd)"
+          TMPDIR=$(mktemp -d)
+          DESTDIR="$TMPDIR/MegabonkTogether"
+          mkdir -p "$DESTDIR"
+
+          for src in "${FILES[@]}"; do
+            cp "$src" "$DESTDIR/"
+          done
+
+          (cd "$TMPDIR" && zip -r "$REPO_ROOT/$ZIP" "MegabonkTogether")
+
+          rm -rf "$TMPDIR"
+
+          echo "Files in artifacts:"
+          ls -la artifacts
+        env:
+          ARCHIVE_NAME: ${{ env.ARCHIVE_NAME }}
+
+      - name: Upload to GitHub Release
+        if: ${{ github.event_name != 'workflow_dispatch' }}
+        run: |
+          gh release upload "${{ env.VERSION }}" "artifacts/${{ env.ARCHIVE_NAME }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
