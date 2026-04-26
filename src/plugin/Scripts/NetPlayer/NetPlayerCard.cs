@@ -257,14 +257,20 @@ namespace MegabonkTogether.Scripts.NetPlayer
             if (healthBar != null)
             {
                 var healthBarRect = healthBar.GetRectTransform();
-                healthBarRect?.anchoredPosition = new Vector2(0, -iconSize - spacing - nameTextHeight - spacing);
+                if (healthBarRect != null)
+                {
+                    healthBarRect.anchoredPosition = new Vector2(0, -iconSize - spacing - nameTextHeight - spacing);
+                }
                 healthBar.Resize(iconSize, healthBarHeight);
             }
 
             if (shieldBar != null)
             {
                 var shieldBarRect = shieldBar.GetRectTransform();
-                shieldBarRect?.anchoredPosition = new Vector2(iconSize + spacing, -iconSize - spacing - nameTextHeight - spacing);
+                if (shieldBarRect != null)
+                {
+                    shieldBarRect.anchoredPosition = new Vector2(iconSize + spacing, -iconSize - spacing - nameTextHeight - spacing);
+                }
                 shieldBar.Resize(iconSize, healthBarHeight);
             }
 
