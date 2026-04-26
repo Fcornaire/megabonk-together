@@ -45,7 +45,7 @@ namespace MegabonkTogether.Common
         string GetDownloadedVersion();
         public void LaunchUpdaterOnExit(string pluginDirectory);
         public string GetLatestVersion();
-        public bool IsThunderstoreBuild();
+        public bool IsCustomBuild();
         public string GetCurrentVersion();
         public Task EnsureChangelogExists(string version, string pluginDirectory);
     }
@@ -67,13 +67,13 @@ namespace MegabonkTogether.Common
         private DateTime lastUpdateCheck = DateTime.MinValue;
 
 #if THUNDERSTORE
-        private bool isThunderstoreBuild = true;
+        private bool isCustomBuild = true;
         private string buildType = "Thunderstore";
 #elif PROTON
-        private bool isThunderstoreBuild = true;
+        private bool isCustomBuild = true;
         private string buildType = "Proton";
 #else
-        private bool isThunderstoreBuild = false;
+        private bool isCustomBuild = false;
         private string buildType = "Standard";
 #endif
 
@@ -104,9 +104,9 @@ namespace MegabonkTogether.Common
             return isUpdateAvailable;
         }
 
-        public bool IsThunderstoreBuild()
+        public bool IsCustomBuild()
         {
-            return isThunderstoreBuild;
+            return isCustomBuild;
         }
 
         public string GetDownloadedVersion()
@@ -170,7 +170,7 @@ namespace MegabonkTogether.Common
                 {
                     logger.LogInfo($"New version available: {latestRelease.TagName} (current: {currentVersion})");
 
-                    if (isThunderstoreBuild)
+                    if (isCustomBuild)
                     {
                         logger.LogInfo($"{buildType} build detected - update download is disabled. Please update through {buildType}.");
                         isUpdateAvailable = true;
@@ -502,7 +502,7 @@ namespace MegabonkTogether.Common
 
         public void LaunchUpdaterOnExit(string pluginDirectory)
         {
-            if (isThunderstoreBuild)
+            if (isCustomBuild)
             {
                 logger.LogInfo($"{buildType} build - updater launch is disabled");
                 return;

@@ -67,7 +67,7 @@ namespace MegabonkTogether.Patches
             Plugin.Instance.PlayTogetherButton = customButton;
             Plugin.Instance.SetMainMenu(__instance);
 
-            if (autoUpdaterService.IsThunderstoreBuild() && autoUpdaterService.IsAnUpdateAvailable())
+            if (autoUpdaterService.IsCustomBuild() && autoUpdaterService.IsAnUpdateAvailable())
             {
                 customButton.gameObject.SetActive(false);
             }
@@ -76,7 +76,7 @@ namespace MegabonkTogether.Patches
             {
                 hasCheckedChangelog = true;
 
-                if (string.IsNullOrEmpty(ModConfig.PreviousVersion.Value) && !autoUpdaterService.IsThunderstoreBuild())
+                if (string.IsNullOrEmpty(ModConfig.PreviousVersion.Value) && !autoUpdaterService.IsCustomBuild())
                 {
                     Plugin.Log.LogInfo("First time with changelog system detected");
                     ModConfig.ShowChangelog.Value = true;

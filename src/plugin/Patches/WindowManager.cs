@@ -59,7 +59,7 @@ namespace MegabonkTogether.Patches
                     CoroutineRunner.Instance.Stop(SpawnPlayerPortalPatches.WaitForLobbyCoroutine);
                 }
 
-                if (autoUpdaterService.IsThunderstoreBuild() && hasShownUpdateModal) return;
+                if (autoUpdaterService.IsCustomBuild() && hasShownUpdateModal) return;
 
                 Task.Run(async () =>
                 {
@@ -69,7 +69,7 @@ namespace MegabonkTogether.Patches
                     {
                         Plugin.ShowUpdateAvailableModal();
 
-                        if (autoUpdaterService.IsThunderstoreBuild())
+                        if (autoUpdaterService.IsCustomBuild())
                         {
                             hasShownUpdateModal = true;
                         }

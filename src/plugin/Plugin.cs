@@ -172,7 +172,7 @@ namespace MegabonkTogether
                     try
                     {
                         var updateAvailable = await autoUpdaterService.CheckAndUpdate();
-                        if (updateAvailable && !autoUpdaterService.IsThunderstoreBuild())
+                        if (updateAvailable && !autoUpdaterService.IsCustomBuild())
                         {
                             Log.LogInfo("An update has been downloaded and will be applied when you quit the game.");
                         }
