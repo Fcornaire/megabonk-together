@@ -30,9 +30,10 @@ namespace MegabonkTogether.Patches.Unity
                 return false;
             }
 
-            if (__instance.name == "Player" && playerManagerService.PeakNetplayerPositionRequest().HasValue)
+            var pendingRequest = playerManagerService.PeakNetplayerPositionRequest();
+            if (pendingRequest.HasValue && __instance.name == "Player")
             {
-                var netPlayerId = playerManagerService.PeakNetplayerPositionRequest().Value;
+                var netPlayerId = pendingRequest.Value;
                 var localPlayerId = playerManagerService.GetLocalPlayer().ConnectionId;
                 if (netPlayerId == localPlayerId)
                 {
@@ -81,9 +82,10 @@ namespace MegabonkTogether.Patches.Unity
             }
 
 
-            if (__instance.name == "Hips" && playerManagerService.PeakNetplayerPositionRequest().HasValue)
+            var pendingRequest = playerManagerService.PeakNetplayerPositionRequest();
+            if (pendingRequest.HasValue && __instance.name == "Hips")
             {
-                var netPlayerId = playerManagerService.PeakNetplayerPositionRequest().Value;
+                var netPlayerId = pendingRequest.Value;
                 var localPlayerId = playerManagerService.GetLocalPlayer().ConnectionId;
                 if (netPlayerId == localPlayerId)
                 {
@@ -124,9 +126,10 @@ namespace MegabonkTogether.Patches.Unity
                 return false;
             }
 
-            if (__instance.name == "Renderer" && playerManagerService.PeakNetplayerPositionRequest().HasValue)
+            var pendingRequest = playerManagerService.PeakNetplayerPositionRequest();
+            if (pendingRequest.HasValue && __instance.name == "Renderer")
             {
-                var netPlayerId = playerManagerService.PeakNetplayerPositionRequest().Value;
+                var netPlayerId = pendingRequest.Value;
                 var localPlayerId = playerManagerService.GetLocalPlayer().ConnectionId;
 
                 if (netPlayerId == localPlayerId)

@@ -93,6 +93,9 @@ namespace MegabonkTogether
         private Il2CppSystem.Action<WeaponBase> originalWeaponAddedAction = null;
         private Il2CppSystem.Action<EStat> originalStatUpdateAction = null;
 
+        private static int distanceTargetFrame = -1;
+        private static Vector3 distanceTarget;
+
         public override void Load()
         {
             Instance = this;
@@ -485,19 +488,25 @@ namespace MegabonkTogether
 
         public static DistanceToPlayer GetDistanceToPlayer(Vector3 position)
         {
-            var player = GameManager.Instance.player;
-            if (player == null)
+            if (Time.frameCount != distanceTargetFrame)
             {
-                return DistanceToPlayer.Far;
+                var player = GameManager.Instance.player;
+                if (player == null)
+                {
+                    return DistanceToPlayer.Far;
+                }
+
+                var target = player.transform.position;
+                if (player.IsDead())
+                {
+                    target = Instance.CameraSwitcher.GetCurrentTarget().position;
+                }
+
+                distanceTarget = target;
+                distanceTargetFrame = Time.frameCount;
             }
 
-            var target = player.transform.position;
-            if (player.IsDead())
-            {
-                target = Instance.CameraSwitcher.GetCurrentTarget().position;
-            }
-
-            var distance = Vector3.Distance(position, target);
+            var distance = Vector3.Distance(position, distanceTarget);
             if (distance < 25f)
             {
                 return DistanceToPlayer.Close;

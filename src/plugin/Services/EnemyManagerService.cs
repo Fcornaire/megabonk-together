@@ -101,17 +101,21 @@ namespace MegabonkTogether.Services
         /// <returns></returns>
         public IEnumerable<EnemyModel> GetAllEnemiesDeltaAndUpdate()
         {
-            var currentEnemies = spawnedEnemies.Select(kv => kv.Value.ToModel(kv.Key)).ToList();
+            var currentEnemies = new Dictionary<uint, EnemyModel>(spawnedEnemies.Count);
+            foreach (var (id, enemy) in spawnedEnemies)
+            {
+                currentEnemies[id] = enemy.ToModel(id);
+            }
 
             if (previousSpawnedEnemiesDelta.Count == 0)
             {
-                previousSpawnedEnemiesDelta = currentEnemies.ToDictionary(e => e.Id);
-                return currentEnemies;
+                previousSpawnedEnemiesDelta = currentEnemies;
+                return currentEnemies.Values;
             }
 
             var deltas = new List<EnemyModel>();
 
-            foreach (var current in currentEnemies)
+            foreach (var current in currentEnemies.Values)
             {
                 if (!previousSpawnedEnemiesDelta.TryGetValue(current.Id, out var previous) || HasDelta(previous, current))
                 {
@@ -119,7 +123,7 @@ namespace MegabonkTogether.Services
                 }
             }
 
-            previousSpawnedEnemiesDelta = currentEnemies.ToDictionary(e => e.Id);
+            previousSpawnedEnemiesDelta = currentEnemies;
 
             return deltas;
         }
@@ -165,6 +169,8 @@ namespace MegabonkTogether.Services
                 return 0;
             }
 
+            DynamicData.For(enemy).Set("netplayId", currentEnemyId);
+
             return currentEnemyId;
         }
 
@@ -176,11 +182,20 @@ namespace MegabonkTogether.Services
             if (!spawnedEnemies.TryAdd(enemyId, enemy))
             {
                 Plugin.Log.LogWarning($"Attempted to add an enemy that already exists. EnemyId: {enemyId}");
+                return;
             }
+
+            DynamicData.For(enemy).Set("netplayId", enemyId);
         }
 
         public KeyValuePair<uint, Enemy> GetEnemyByReference(Enemy enemy)
         {
+            var netplayId = DynamicData.For(enemy).Get<uint?>("netplayId");
+            if (netplayId.HasValue && spawnedEnemies.TryGetValue(netplayId.Value, out var stored) && stored == enemy)
+            {
+                return new KeyValuePair<uint, Enemy>(netplayId.Value, stored);
+            }
+
             return spawnedEnemies.FirstOrDefault(kv => kv.Value == enemy);
         }
 
@@ -194,7 +209,6 @@ namespace MegabonkTogether.Services
 
         public void ResetForNextLevel()
         {
-            currentEnemyId = 0;
             //spawnedEnemies.Select(Enemy => Enemy.Value).ToList().ForEach(enemy => GameObject.Destroy(enemy.gameObject));
             spawnedEnemies.Clear();
             previousSpawnedEnemiesDelta = [];

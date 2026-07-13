@@ -43,6 +43,10 @@ More info at [Notable Network Changes](./NETPLAY_CHANGES.md)
 <details>
 <summary>📋 Click to view full changelog</summary>
 
+### v5.1.0
+
+- 🚀 **More code optimizations one more time !**
+
 ### v5.0.0
 
 - 🐧 **Added Proton support**: You can now play with friends on Steam using Proton/Steam Deck, with cross-play on Windows. This is also an experimental and might not work perfectly

@@ -15,6 +15,8 @@ namespace MegabonkTogether.Scripts.NetPlayer
 
         private readonly Dictionary<EWeapon, InventoryItemPrefabUI> weaponContainers = [];
         private readonly Dictionary<ETome, InventoryItemPrefabUI> tomeContainers = [];
+        private readonly Dictionary<EWeapon, int> lastWeaponLevels = [];
+        private readonly Dictionary<ETome, int> lastTomeLevels = [];
 
         private float iconSize;
 
@@ -100,13 +102,23 @@ namespace MegabonkTogether.Scripts.NetPlayer
 
         public void UpdateWeaponLevel(EWeapon weapon, int lvl)
         {
+            if (lastWeaponLevels.TryGetValue(weapon, out var lastLevel) && lastLevel == lvl)
+            {
+                return;
+            }
+
             if (!weaponContainers.ContainsKey(weapon))
             {
                 var data = DataManager.Instance.GetWeapon(weapon);
                 AddWeapon(data);
             }
 
-            var itemUI = weaponContainers[weapon];
+            if (!weaponContainers.TryGetValue(weapon, out var itemUI))
+            {
+                return;
+            }
+
+            lastWeaponLevels[weapon] = lvl;
 
             Il2CppSystem.Collections.Generic.Dictionary<string, string> smartStrings = new();
             smartStrings.Add("level", lvl.ToString());
@@ -115,13 +127,23 @@ namespace MegabonkTogether.Scripts.NetPlayer
 
         public void UpdateTomeLevel(ETome tome, int lvl)
         {
+            if (lastTomeLevels.TryGetValue(tome, out var lastLevel) && lastLevel == lvl)
+            {
+                return;
+            }
+
             if (!tomeContainers.ContainsKey(tome))
             {
                 var data = DataManager.Instance.GetTome(tome);
                 AddTome(data);
             }
 
-            var itemUI = tomeContainers[tome];
+            if (!tomeContainers.TryGetValue(tome, out var itemUI))
+            {
+                return;
+            }
+
+            lastTomeLevels[tome] = lvl;
 
             Il2CppSystem.Collections.Generic.Dictionary<string, string> smartStrings = new();
             smartStrings.Add("level", lvl.ToString());
@@ -134,10 +156,11 @@ namespace MegabonkTogether.Scripts.NetPlayer
             {
                 if (container.Value != null)
                 {
-                    Object.Destroy(container.Value);
+                    Object.Destroy(container.Value.gameObject);
                 }
             }
             weaponContainers.Clear();
+            lastWeaponLevels.Clear();
         }
 
         private void ClearTomes()
@@ -146,10 +169,11 @@ namespace MegabonkTogether.Scripts.NetPlayer
             {
                 if (container.Value != null)
                 {
-                    Object.Destroy(container.Value);
+                    Object.Destroy(container.Value.gameObject);
                 }
             }
             tomeContainers.Clear();
+            lastTomeLevels.Clear();
         }
 
         public void Resize(float newIconSize)

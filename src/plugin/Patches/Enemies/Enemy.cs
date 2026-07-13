@@ -8,7 +8,7 @@ using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
 using MonoMod.Utils;
 using System;
-using System.Linq;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace MegabonkTogether.Patches.Enemies
@@ -21,7 +21,7 @@ namespace MegabonkTogether.Patches.Enemies
         private static readonly IEnemyManagerService enemyManagerService = Plugin.Services.GetService<IEnemyManagerService>();
         private static readonly ITrackerService trackerService = Plugin.Services.GetService<ITrackerService>();
 
-        public static readonly string[] AllowedDamageSource = Enum.GetNames(typeof(EItem));
+        public static readonly HashSet<string> AllowedDamageSource = new(Enum.GetNames(typeof(EItem)));
 
         public static readonly DistanceThrottler EnemiesDistanceThrottler = new();
 
@@ -38,10 +38,17 @@ namespace MegabonkTogether.Patches.Enemies
                 return;
             }
 
+            EnemiesDistanceThrottler.Cleanup(__instance.GetInstanceID());
+            var renderer = __instance.GetComponentInChildren<Renderer>();
+            if (renderer != null && !renderer.enabled)
+            {
+                renderer.enabled = true;
+            }
+
             var isServer = synchronizationService.IsServerMode();
             if (isServer.HasValue && isServer.Value)
             {
-                if (playerManagerService.TryGetGetNetplayerPosition(out uint id)) //TODO: this could be simplifed but too lazy 
+                if (playerManagerService.TryGetGetNetplayerPosition(out uint id)) //TODO: this could be simplifed but too lazy
                 {
                     var host = playerManagerService.GetLocalPlayer();
                     if (host.ConnectionId == id)
@@ -362,12 +369,6 @@ namespace MegabonkTogether.Patches.Enemies
 
             if (__instance.IsBoss() || __instance.IsStageBoss() || __instance.IsFinalBoss())
             {
-                var renderer = __instance.GetComponentInChildren<Renderer>();
-                if (renderer != null && !renderer.enabled)
-                {
-                    renderer.enabled = true;
-                }
-
                 return true;
             }
 

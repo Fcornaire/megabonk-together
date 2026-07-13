@@ -6,6 +6,11 @@
 #     "Change 2 description",
 # ]
 
+[version."5.1.0"]
+changes = [
+    "More code optimization! this wil help for more stable FPS"
+]
+
 [version."5.0.0"]
 changes = [
     "Added Proton support: You can now play with your friends on Steam using Proton/SteamDeck (Cross playable on windows) . Please note that this is also an experimental feature and might not work perfectly."

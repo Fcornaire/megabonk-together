@@ -9,6 +9,7 @@ namespace MegabonkTogether.Patches
     internal class RigidBodyPatches
     {
         private static readonly IPlayerManagerService playerManagerService = Plugin.Services.GetService<IPlayerManagerService>();
+        private static readonly ISynchronizationService synchronizationService = Plugin.Services.GetService<ISynchronizationService>();
         /// <summary>
         /// Rigidbody.get_position is used in SpawnPositions.GetEnemySpawnPosition
         /// This is used for spawning enemys closer to a netplayer
@@ -17,6 +18,11 @@ namespace MegabonkTogether.Patches
         [HarmonyPatch("get_position")]
         public static void Get_position_PostFix(ref Vector3 __result, Transform __instance)
         {
+            if (!synchronizationService.HasNetplaySessionStarted())
+            {
+                return;
+            }
+
             var netplayerIdNullable = playerManagerService.PeakNetplayerPosition();
             if (netplayerIdNullable.HasValue)
             {

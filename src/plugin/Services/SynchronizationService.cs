@@ -146,6 +146,12 @@ namespace MegabonkTogether.Services
         private readonly ManualLogSource logger;
         private readonly ConcurrentBag<SpawnedObject> toSpawns = [];
         private readonly ConcurrentBag<SpawnedObjectInCrypt> toUpdate = [];
+        private readonly ConcurrentQueue<SpawnedEnemy> pendingEnemySpawns = new();
+        private readonly HashSet<uint> enemiesDiedBeforeSpawn = [];
+        private readonly Dictionary<EEnemy, Material> clonedExtraEnemyMaterials = [];
+        private Coroutine newObjectToSpawnRoutine;
+        private Coroutine pendingEnemySpawnRoutine;
+        private const int MAX_ENEMY_SPAWNS_PER_FRAME = 32;
         private readonly ConcurrentDictionary<uint, ICollection<uint>> shrineChargingPlayers = new();
         private readonly ConcurrentDictionary<uint, ICollection<uint>> pylonChargingPlayers = new();
         private readonly ConcurrentDictionary<uint, ICollection<uint>> lampsChargingPlayers = [];
@@ -662,7 +668,12 @@ namespace MegabonkTogether.Services
 
                     if (IsServerMode() == false)
                     {
-                        CoroutineRunner.Instance.Run(NewObjectToSpawnRoutine());
+                        CoroutineRunner.Instance.Stop(newObjectToSpawnRoutine);
+                        newObjectToSpawnRoutine = CoroutineRunner.Instance.Run(NewObjectToSpawnRoutine());
+
+                        CoroutineRunner.Instance.Stop(pendingEnemySpawnRoutine);
+                        pendingEnemySpawnRoutine = CoroutineRunner.Instance.Run(PendingEnemySpawnRoutine());
+
                         EnemyManager.Instance.summonerController.timeline.events.Clear(); //Remove all timelines events from client, will be handled by server
                     }
                     break;
@@ -702,6 +713,10 @@ namespace MegabonkTogether.Services
             specificDesertGraves.Clear();
             currentCoffin = null;
 
+            pendingEnemySpawns.Clear();
+            enemiesDiedBeforeSpawn.Clear();
+            Patches.Enemies.EnemyPatch.EnemiesDistanceThrottler.ClearAll();
+
             Plugin.Instance.NetPlayersDisplayer.ResetCards();
             Plugin.Instance.ClearMapEventsManager();
         }
@@ -726,7 +741,8 @@ namespace MegabonkTogether.Services
         }
         private IEnumerator NewObjectToSpawnRoutine() //TODO: add a auto cancel after X seconds
         {
-            while (!cancellationToken.IsCancellationRequested)
+            var token = cancellationToken;
+            while (!token.IsCancellationRequested)
             {
                 if (currentState == State.Started)
                 {
@@ -832,6 +848,38 @@ namespace MegabonkTogether.Services
                 return;
             }
 
+            pendingEnemySpawns.Enqueue(spawnedEnemy);
+        }
+
+        private IEnumerator PendingEnemySpawnRoutine()
+        {
+            var token = cancellationToken;
+            while (!token.IsCancellationRequested)
+            {
+                var budget = MAX_ENEMY_SPAWNS_PER_FRAME;
+                while (budget-- > 0 && currentState == State.Started && pendingEnemySpawns.TryDequeue(out var spawnedEnemy))
+                {
+                    if (enemiesDiedBeforeSpawn.Remove(spawnedEnemy.Id))
+                    {
+                        continue; //Death message already arrived, don't spawn a ghost
+                    }
+
+                    try
+                    {
+                        ProcessSpawnedEnemy(spawnedEnemy);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning($"Failed to process spawned enemy {spawnedEnemy.Id}: {ex}");
+                    }
+                }
+
+                yield return null;
+            }
+        }
+
+        private void ProcessSpawnedEnemy(SpawnedEnemy spawnedEnemy)
+        {
             var enemy = EnemyManager.Instance.SpawnEnemy
                 (DataManager.Instance.GetEnemyData((EEnemy)spawnedEnemy.Name),
                 spawnedEnemy.Position.ToUnityVector3(),
@@ -848,11 +896,17 @@ namespace MegabonkTogether.Services
                 return;
             }
 
-            var extraMaterial = spawnedObjectManagerService.GetExtraEnemyMaterial(enemy.enemyData.enemyName);
+            var enemyName = enemy.enemyData.enemyName;
+            var extraMaterial = spawnedObjectManagerService.GetExtraEnemyMaterial(enemyName);
             if (extraMaterial != null)
             {
                 var original = enemy.renderer.sharedMaterial;
-                var clone = new Material(extraMaterial);
+
+                if (!clonedExtraEnemyMaterials.TryGetValue(enemyName, out var clone) || clone == null)
+                {
+                    clone = new Material(extraMaterial);
+                    clonedExtraEnemyMaterials[enemyName] = clone;
+                }
 
                 Il2CppFindHelper.RuntimeSetSharedMaterials(enemy.renderer, [original, clone]);
             }
@@ -1546,6 +1600,8 @@ namespace MegabonkTogether.Services
             var enemy = enemyManagerService.GetEnemyById(died.EnemyId);
             if (enemy == null)
             {
+                //don't spawn a ghost :/
+                enemiesDiedBeforeSpawn.Add(died.EnemyId);
                 return;
             }
 
