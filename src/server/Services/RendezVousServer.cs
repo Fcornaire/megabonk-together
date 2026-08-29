@@ -63,6 +63,7 @@ namespace MegabonkTogether.Server.Services
 
     public interface IRendezVousServer
     {
+        public int ActiveRelaySessionCount { get; }
         public void CleanRelaySession(uint connectionId);
     }
 
@@ -82,6 +83,8 @@ namespace MegabonkTogether.Server.Services
         private readonly ConcurrentDictionary<uint, PendingRelayConnection> pendingRelayConnections = new();
 
         private bool hasStarted = false;
+
+        public int ActiveRelaySessionCount => sessions.Count;
 
         private const int RENDEZVOUS_PORT = 5678;
         private const int POOLING_INTERVAL_MS = 5;

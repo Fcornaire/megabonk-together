@@ -6,25 +6,29 @@ namespace MegabonkTogether.Server.Services
 
     public interface IMetricsService
     {
+        void RegisterConnectedClientsProvider(Func<int> provider);
+        void RegisterLobbiesProvider(Func<(int shared, int regular)> provider);
+        void RegisterMatchmakingQueueProvider(Func<(int shared, int regular)> provider);
+        void RegisterRelaySessionsProvider(Func<int> provider);
         void ClientConnected(string? ipAddress);
-        void ClientDisconnected();
+        void MatchCreated(bool isSharedExperience, int playerCount);
         void RunStarted(int playerCount, string mapName, int stageLevel, List<string> characters);
-        void LobbyCreated(bool isSharedExperience);
-        void LobbyDeleted(bool isSharedExperience);
     }
 
     public class MetricsService : IMetricsService, IDisposable
     {
         private readonly Meter meter;
-        private int connectedClientsCount = 0;
+        private readonly Counter<int> matchesCreated;
+        private Func<int>? connectedClientsProvider;
+        private Func<(int shared, int regular)>? lobbiesProvider;
+        private Func<(int shared, int regular)>? matchmakingQueueProvider;
+        private Func<int>? relaySessionsProvider;
         private readonly ConcurrentDictionary<string, DateTime> dailyUniqueConnections = new(); //No logs !
         private int dailyTotalConnections = 0;
         private int allTimeTotalConnections = 0;
         private int peakUniqueConnections = 0;
         private readonly ConcurrentDictionary<string, int> dailyRunsByMapAndStage = new();
         private readonly ConcurrentDictionary<string, int> dailyCharacterUsage = new();
-        private int activeSharedExperienceLobbies = 0;
-        private int activeRegularLobbies = 0;
         private DateTime lastResetDate = DateTime.UtcNow.Date;
         private readonly object resetLock = new();
         private readonly Timer resetTimer;
@@ -35,7 +39,7 @@ namespace MegabonkTogether.Server.Services
 
             meter.CreateObservableGauge(
                 "megabonk.connected_clients",
-                () => connectedClientsCount,
+                () => connectedClientsProvider?.Invoke() ?? 0,
                 description: "Number of currently connected clients");
 
             meter.CreateObservableGauge(
@@ -70,22 +74,70 @@ namespace MegabonkTogether.Server.Services
 
             meter.CreateObservableGauge(
                 "megabonk.active_shared_experience_lobbies",
-                () => activeSharedExperienceLobbies,
+                () => lobbiesProvider?.Invoke().shared ?? 0,
                 description: "Number of active lobbies in shared experience mode");
 
             meter.CreateObservableGauge(
                 "megabonk.active_regular_lobbies",
-                () => activeRegularLobbies,
+                () => lobbiesProvider?.Invoke().regular ?? 0,
                 description: "Number of active lobbies in regular mode");
 
+            meter.CreateObservableGauge(
+                "megabonk.matchmaking_queue",
+                GetMatchmakingQueue,
+                description: "Players waiting in the random matchmaking queue");
+
+            meter.CreateObservableGauge(
+                "megabonk.relay_sessions",
+                () => relaySessionsProvider?.Invoke() ?? 0,
+                description: "Games currently relayed through the server");
+
+            matchesCreated = meter.CreateCounter<int>(
+                "megabonk.matches_created",
+                description: "Random matches formed by the matchmaker");
+
             resetTimer = new Timer(CheckAndResetIfNewDay, null, TimeSpan.Zero, TimeSpan.FromHours(1));
+        }
+
+        public void RegisterConnectedClientsProvider(Func<int> provider)
+        {
+            connectedClientsProvider = provider;
+        }
+
+        public void RegisterLobbiesProvider(Func<(int shared, int regular)> provider)
+        {
+            lobbiesProvider = provider;
+        }
+
+        public void RegisterMatchmakingQueueProvider(Func<(int shared, int regular)> provider)
+        {
+            matchmakingQueueProvider = provider;
+        }
+
+        public void RegisterRelaySessionsProvider(Func<int> provider)
+        {
+            relaySessionsProvider = provider;
+        }
+
+        public void MatchCreated(bool isSharedExperience, int playerCount)
+        {
+            matchesCreated.Add(1,
+                new KeyValuePair<string, object?>("mode", isSharedExperience ? "shared" : "regular"),
+                new KeyValuePair<string, object?>("players", playerCount));
+        }
+
+        private IEnumerable<Measurement<int>> GetMatchmakingQueue()
+        {
+            var (shared, regular) = matchmakingQueueProvider?.Invoke() ?? (0, 0);
+
+            yield return new Measurement<int>(shared, new KeyValuePair<string, object?>("mode", "shared"));
+            yield return new Measurement<int>(regular, new KeyValuePair<string, object?>("mode", "regular"));
         }
 
         public void ClientConnected(string? ipAddress)
         {
             ResetIfNewDay();
 
-            Interlocked.Increment(ref connectedClientsCount);
             Interlocked.Increment(ref dailyTotalConnections);
             Interlocked.Increment(ref allTimeTotalConnections);
 
@@ -93,11 +145,6 @@ namespace MegabonkTogether.Server.Services
             {
                 dailyUniqueConnections.TryAdd(ipAddress, DateTime.UtcNow);
             }
-        }
-
-        public void ClientDisconnected()
-        {
-            Interlocked.Decrement(ref connectedClientsCount);
         }
 
         public void RunStarted(int playerCount, string mapName, int stageLevel, List<string> characters)
@@ -110,30 +157,6 @@ namespace MegabonkTogether.Server.Services
             foreach (var character in characters)
             {
                 dailyCharacterUsage.AddOrUpdate(character, 1, (_, count) => count + 1);
-            }
-        }
-
-        public void LobbyCreated(bool isSharedExperience)
-        {
-            if (isSharedExperience)
-            {
-                Interlocked.Increment(ref activeSharedExperienceLobbies);
-            }
-            else
-            {
-                Interlocked.Increment(ref activeRegularLobbies);
-            }
-        }
-
-        public void LobbyDeleted(bool isSharedExperience)
-        {
-            if (isSharedExperience)
-            {
-                Interlocked.Decrement(ref activeSharedExperienceLobbies);
-            }
-            else
-            {
-                Interlocked.Decrement(ref activeRegularLobbies);
             }
         }
 
