@@ -36,6 +36,21 @@ namespace MegabonkTogether.Server.Services
             this.logger = logger;
             this.metricsService = metricsService;
             this.rendezVousServer = rendezVousServer;
+            metricsService.RegisterConnectedClientsProvider(() => clients.Count);
+            metricsService.RegisterLobbiesProvider(() =>
+            {
+                var shared = randomMatchHosts.Values.Count(isShared => isShared) + friendliesLobbies.Values.Count(l => l.Host.EnabledSharedExperience);
+                var total = randomMatchHosts.Count + friendliesLobbies.Count;
+
+                return (shared, total - shared);
+            });
+            metricsService.RegisterMatchmakingQueueProvider(() =>
+            {
+                var shared = randomQueue.Values.Count(c => c.EnabledSharedExperience);
+
+                return (shared, randomQueue.Count - shared);
+            });
+            metricsService.RegisterRelaySessionsProvider(() => rendezVousServer.ActiveRelaySessionCount);
             StartMatchmakingLoop();
         }
 
@@ -125,19 +140,19 @@ namespace MegabonkTogether.Server.Services
             clients[id] = client;
             metricsService.ClientConnected(remoteAddress);
 
-            IWsMessage connectedMsg = new MatchmakingServerConnectionStatus
-            {
-                ConnectionId = id,
-                HasJoined = true
-            };
-            await ws.SendMessageAsync(connectedMsg);
-
             logger.LogInformation($"Client connected (random): {id}");
 
             var buffer = new byte[4096];
 
             try
             {
+                IWsMessage connectedMsg = new MatchmakingServerConnectionStatus
+                {
+                    ConnectionId = id,
+                    HasJoined = true
+                };
+                await ws.SendMessageAsync(connectedMsg);
+
                 while (ws.State == WebSocketState.Open && !token.IsCancellationRequested)
                 {
                     var result = await ws.ReceiveAsync(buffer, token);
@@ -177,12 +192,8 @@ namespace MegabonkTogether.Server.Services
                 logger.LogInformation($"Client disconnected: {id}");
                 clients.TryRemove(id, out _);
                 rendezVousServer.CleanRelaySession(id);
-                metricsService.ClientDisconnected();
 
-                if (randomMatchHosts.TryRemove(id, out var wasSharedExperience))
-                {
-                    metricsService.LobbyDeleted(wasSharedExperience);
-                }
+                randomMatchHosts.TryRemove(id, out _);
 
                 RemoveFromQueue(client);
                 ConnectionIdPool.Release(id);
@@ -265,7 +276,6 @@ namespace MegabonkTogether.Server.Services
                 logger.LogInformation($"Friendlies client disconnected: {id}");
                 clients.TryRemove(id, out _);
                 rendezVousServer.CleanRelaySession(id);
-                metricsService.ClientDisconnected();
 
                 if (role == Role.Host)
                 {
@@ -296,7 +306,6 @@ namespace MegabonkTogether.Server.Services
                         }
 
                         friendliesLobbies.TryRemove(roomCode, out _);
-                        metricsService.LobbyDeleted(lobby.Host.EnabledSharedExperience);
                     }
 
                     RoomCodePool.Release(roomCode);
@@ -358,8 +367,6 @@ namespace MegabonkTogether.Server.Services
                 RoomCode = roomCode,
                 Seed = (uint)Random.Shared.Next(),
             };
-
-            metricsService.LobbyCreated(host.EnabledSharedExperience);
 
             logger.LogInformation($"Host {host.Id} created lobby with code: {roomCode}");
 
@@ -450,7 +457,6 @@ namespace MegabonkTogether.Server.Services
             {
                 logger.LogWarning($"Client {client.Id} tried to join room {roomCode} but host is disconnected");
                 friendliesLobbies.TryRemove(roomCode, out _);
-                metricsService.LobbyDeleted(lobby.Host.EnabledSharedExperience);
                 IWsMessage errorMsg = new MatchmakingServerConnectionStatus
                 {
                     ConnectionId = client.Id,
@@ -631,7 +637,7 @@ namespace MegabonkTogether.Server.Services
             var host = matchedClients[Random.Shared.Next(matchedClients.Count)];
 
             randomMatchHosts[host.Id] = host.EnabledSharedExperience;
-            metricsService.LobbyCreated(host.EnabledSharedExperience);
+            metricsService.MatchCreated(host.EnabledSharedExperience, matchedClients.Count);
 
             logger.LogInformation($"Match created with {matchedClients.Count} players: {string.Join(",", matchedClients.Select(c => c.Id))}, host: {host.Id}");
 
