@@ -19,16 +19,16 @@ namespace MegabonkTogether.Server.Services
     {
         private readonly Meter meter;
         private readonly Counter<int> matchesCreated;
+        private readonly Counter<int> connections;
+        private readonly Counter<int> runsStarted;
+        private readonly Counter<int> characterPicks;
         private Func<int>? connectedClientsProvider;
         private Func<(int shared, int regular)>? lobbiesProvider;
         private Func<(int shared, int regular)>? matchmakingQueueProvider;
         private Func<int>? relaySessionsProvider;
         private readonly ConcurrentDictionary<string, DateTime> dailyUniqueConnections = new(); //No logs !
-        private int dailyTotalConnections = 0;
         private int allTimeTotalConnections = 0;
         private int peakUniqueConnections = 0;
-        private readonly ConcurrentDictionary<string, int> dailyRunsByMapAndStage = new();
-        private readonly ConcurrentDictionary<string, int> dailyCharacterUsage = new();
         private DateTime lastResetDate = DateTime.UtcNow.Date;
         private readonly object resetLock = new();
         private readonly Timer resetTimer;
@@ -48,29 +48,14 @@ namespace MegabonkTogether.Server.Services
                 description: "Number of unique clients connected today");
 
             meter.CreateObservableGauge(
-                "megabonk.daily_total_connections",
-                () => GetDailyTotalConnections(),
-                description: "Total number of connections today (including reconnections)");
-
-            meter.CreateObservableGauge(
                 "megabonk.alltime_total_connections",
                 () => allTimeTotalConnections,
                 description: "Total number of connections all time (including reconnections)");
 
             meter.CreateObservableGauge(
                 "megabonk.peak_unique_connections",
-                () => peakUniqueConnections,
+                () => Math.Max(peakUniqueConnections, dailyUniqueConnections.Count),
                 description: "Peak number of unique clients connected in a single day");
-
-            meter.CreateObservableGauge(
-                "megabonk.daily_runs_by_map_stage",
-                () => GetDailyRunsByMapAndStage(),
-                description: "Number of runs started today grouped by map and stage");
-
-            meter.CreateObservableGauge(
-                "megabonk.daily_character_usage",
-                () => GetDailyCharacterUsage(),
-                description: "Number of times each character was picked today");
 
             meter.CreateObservableGauge(
                 "megabonk.active_shared_experience_lobbies",
@@ -95,6 +80,18 @@ namespace MegabonkTogether.Server.Services
             matchesCreated = meter.CreateCounter<int>(
                 "megabonk.matches_created",
                 description: "Random matches formed by the matchmaker");
+
+            connections = meter.CreateCounter<int>(
+                "megabonk.connections",
+                description: "Client connections (including reconnections)");
+
+            runsStarted = meter.CreateCounter<int>(
+                "megabonk.runs_started",
+                description: "Runs started, by map, stage and player count");
+
+            characterPicks = meter.CreateCounter<int>(
+                "megabonk.character_picks",
+                description: "Characters picked at run start");
 
             resetTimer = new Timer(CheckAndResetIfNewDay, null, TimeSpan.Zero, TimeSpan.FromHours(1));
         }
@@ -138,7 +135,7 @@ namespace MegabonkTogether.Server.Services
         {
             ResetIfNewDay();
 
-            Interlocked.Increment(ref dailyTotalConnections);
+            connections.Add(1);
             Interlocked.Increment(ref allTimeTotalConnections);
 
             if (!string.IsNullOrEmpty(ipAddress))
@@ -149,57 +146,20 @@ namespace MegabonkTogether.Server.Services
 
         public void RunStarted(int playerCount, string mapName, int stageLevel, List<string> characters)
         {
-            ResetIfNewDay();
-
-            var key = $"{mapName}_stage_{stageLevel}_players_{playerCount}";
-            dailyRunsByMapAndStage.AddOrUpdate(key, 1, (_, count) => count + 1);
+            runsStarted.Add(1,
+                new KeyValuePair<string, object?>("map", mapName),
+                new KeyValuePair<string, object?>("stage", stageLevel),
+                new KeyValuePair<string, object?>("players", playerCount));
 
             foreach (var character in characters)
             {
-                dailyCharacterUsage.AddOrUpdate(character, 1, (_, count) => count + 1);
+                characterPicks.Add(1, new KeyValuePair<string, object?>("character", character));
             }
         }
 
         private int GetDailyUniqueClientsCount()
         {
             return dailyUniqueConnections.Count;
-        }
-
-        private int GetDailyTotalConnections()
-        {
-            return dailyTotalConnections;
-        }
-
-        private IEnumerable<Measurement<int>> GetDailyRunsByMapAndStage()
-        {
-            foreach (var kvp in dailyRunsByMapAndStage)
-            {
-                var parts = kvp.Key.Split('_');
-                if (parts.Length >= 5)
-                {
-                    var mapName = parts[0];
-                    var stage = parts[2];
-                    var players = parts[4];
-
-                    yield return new Measurement<int>(
-                        kvp.Value,
-                        new KeyValuePair<string, object?>("map", mapName),
-                        new KeyValuePair<string, object?>("stage", stage),
-                        new KeyValuePair<string, object?>("players", players)
-                    );
-                }
-            }
-        }
-
-        private IEnumerable<Measurement<int>> GetDailyCharacterUsage()
-        {
-            foreach (var kvp in dailyCharacterUsage)
-            {
-                yield return new Measurement<int>(
-                    kvp.Value,
-                    new KeyValuePair<string, object?>("character", kvp.Key)
-                );
-            }
         }
 
         private void CheckAndResetIfNewDay(object? state)
@@ -224,9 +184,6 @@ namespace MegabonkTogether.Server.Services
                         }
 
                         dailyUniqueConnections.Clear();
-                        dailyTotalConnections = 0;
-                        dailyRunsByMapAndStage.Clear();
-                        dailyCharacterUsage.Clear();
                         lastResetDate = today;
                     }
                 }
