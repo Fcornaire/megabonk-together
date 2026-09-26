@@ -39,6 +39,7 @@ namespace MegabonkTogether.Server.Services
     public class RelaySession
     {
         public uint HostConnectionId;
+        public DateTime CreatedAt = DateTime.UtcNow;
 
         public RelayPeer Host;
         public ConcurrentDictionary<uint, RelayPeer> Clients = new();
@@ -93,6 +94,7 @@ namespace MegabonkTogether.Server.Services
         private static readonly TimeSpan PENDING_CLIENT_RETENTION = TimeSpan.FromSeconds(45);
         private static readonly TimeSpan PROCESSED_PAIR_RETENTION = TimeSpan.FromSeconds(45);
         private static readonly TimeSpan PENDING_RELAY_RETENTION = TimeSpan.FromSeconds(30);
+        private static readonly TimeSpan UNBOUND_SESSION_RETENTION = TimeSpan.FromMinutes(2);
 
         public RendezVousServer(ILogger<RendezVousServer> logger)
         {
@@ -186,6 +188,14 @@ namespace MegabonkTogether.Server.Services
             //{
 
             //};
+
+            listener.PeerDisconnectedEvent += (peer, info) =>
+            {
+                if (peerLookup.TryRemove(peer, out var relayPeer))
+                {
+                    logger.LogInformation($"Relay peer {relayPeer.ConnectionId} disconnected ({info.Reason})");
+                }
+            };
 
             listener.ConnectionRequestEvent += request =>
             {
@@ -626,6 +636,7 @@ namespace MegabonkTogether.Server.Services
             int pendingClientsRemoved = 0;
             int pairsRemoved = 0;
             int pendingRelayConnectionsRemoved = 0;
+            int staleSessionsRemoved = 0;
 
             foreach (var kvp in registeredHosts)
             {
@@ -699,12 +710,43 @@ namespace MegabonkTogether.Server.Services
                 }
             }
 
-            if (hostsRemoved > 0 || pendingClientsRemoved > 0 || pairsRemoved > 0 || pendingRelayConnectionsRemoved > 0)
+            foreach (var kvp in sessions)
+            {
+                var session = kvp.Value;
+                if (now - session.CreatedAt <= UNBOUND_SESSION_RETENTION || HasConnectedPeer(session))
+                {
+                    continue;
+                }
+
+                if (sessions.TryRemove(kvp.Key, out _))
+                {
+                    staleSessionsRemoved++;
+                    logger.LogInformation($"Removed stale relay session for host {kvp.Key}");
+                    session.PendingToHost.Clear();
+                    foreach (var client in session.Clients.Values)
+                    {
+                        DisconnectRelayPeer(client);
+                    }
+                    DisconnectRelayPeer(session.Host);
+                }
+            }
+
+            if (hostsRemoved > 0 || pendingClientsRemoved > 0 || pairsRemoved > 0 || pendingRelayConnectionsRemoved > 0 || staleSessionsRemoved > 0)
             {
                 logger.LogInformation($"RendezVous Server Cleanup Report at {now}:");
-                logger.LogInformation($"    Cleanup complete: {hostsRemoved} hosts, {pendingClientsRemoved} pending clients, {pairsRemoved} processed pairs, {pendingRelayConnectionsRemoved} pending connections removed");
-                logger.LogInformation($"    Current state: {registeredHosts.Count} hosts, {pendingClients.Count} pending queues, {processedPairs.Count} processed pairs, {pendingRelayConnections.Count} pending relay connections");
+                logger.LogInformation($"    Cleanup complete: {hostsRemoved} hosts, {pendingClientsRemoved} pending clients, {pairsRemoved} processed pairs, {pendingRelayConnectionsRemoved} pending connections, {staleSessionsRemoved} relay sessions removed");
+                logger.LogInformation($"    Current state: {registeredHosts.Count} hosts, {pendingClients.Count} pending queues, {processedPairs.Count} processed pairs, {pendingRelayConnections.Count} pending relay connections, {sessions.Count} relay sessions");
             }
+        }
+
+        private static bool HasConnectedPeer(RelaySession session)
+        {
+            if (session.Host?.NetPeer?.ConnectionState == ConnectionState.Connected)
+            {
+                return true;
+            }
+
+            return session.Clients.Values.Any(c => c.NetPeer?.ConnectionState == ConnectionState.Connected);
         }
 
         private void Update()
@@ -727,36 +769,36 @@ namespace MegabonkTogether.Server.Services
                 }
 
                 DisconnectRelayPeer(session.Host);
-                return;
             }
 
             foreach (var sess in sessions.Values)
             {
-                if (sess.Clients.TryRemove(connectionId, out var clientPeer))
+                if (!sess.Clients.TryRemove(connectionId, out var clientPeer))
                 {
-                    logger.LogInformation($"Cleaning relay client {connectionId} from host {sess.HostConnectionId}");
-                    DisconnectRelayPeer(clientPeer);
+                    continue;
+                }
 
-                    if (sess.Clients.IsEmpty)
+                logger.LogInformation($"Cleaning relay client {connectionId} from host {sess.HostConnectionId}");
+                DisconnectRelayPeer(clientPeer);
+
+                if (sess.Clients.IsEmpty)
+                {
+                    logger.LogInformation($"No more clients for host {sess.HostConnectionId}, cleaning up host relay peer");
+                    DisconnectRelayPeer(sess.Host);
+                    sessions.TryRemove(sess.HostConnectionId, out _);
+                }
+                else
+                {
+                    var disconnectedPlayer = new PlayerDisconnected
                     {
-                        logger.LogInformation($"No more clients for host {sess.HostConnectionId}, cleaning up host relay peer");
-                        DisconnectRelayPeer(sess.Host);
-                        sessions.TryRemove(sess.HostConnectionId, out _);
-                    }
-                    else
-                    {
-                        var disconnectedPlayer = new PlayerDisconnected
-                        {
-                            ConnectionId = connectionId
-                        };
+                        ConnectionId = connectionId
+                    };
 
-                        NetDataWriter writer = new();
-                        var msgBytes = MemoryPackSerializer.Serialize<IGameNetworkMessage>(disconnectedPlayer);
-                        writer.Put(msgBytes);
+                    NetDataWriter writer = new();
+                    var msgBytes = MemoryPackSerializer.Serialize<IGameNetworkMessage>(disconnectedPlayer);
+                    writer.Put(msgBytes);
 
-                        sess.Host.NetPeer.Send(writer, DeliveryMethod.ReliableOrdered);
-                    }
-                    break;
+                    sess.Host.NetPeer?.Send(writer, DeliveryMethod.ReliableOrdered);
                 }
             }
         }
