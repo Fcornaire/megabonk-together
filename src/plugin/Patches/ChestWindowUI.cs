@@ -50,6 +50,10 @@ namespace MegabonkTogether.Patches
         [HarmonyPatch(nameof(ChestWindowUi.Open))]
         public static void Open_Prefix(ChestWindowUi __instance, Assets.Scripts.UI.InGame.Rewards.EEncounter encounterType)
         {
+            // b_open may have been nulled by Open_Postfix (non shared experience) and never restored.
+            // The original Open dereferences it, so restore it before running, otherwise the window is left half initialized (soft lock).
+            RestoreOpenButton(__instance);
+
             if (__instance.chestOpening == null || __instance.b_open == null ||
                 __instance.b_leave == null || __instance.b_take == null ||
                 __instance.b_banish == null || __instance.t_itemName == null)
@@ -126,6 +130,8 @@ namespace MegabonkTogether.Patches
         [HarmonyPatch(nameof(ChestWindowUi.OnClose))]
         public static void OnClose_Postfix(ChestWindowUi __instance)
         {
+            RestoreOpenButton(__instance);
+
             if (!synchronizationService.HasNetplaySessionStarted())
             {
                 return;
@@ -137,10 +143,38 @@ namespace MegabonkTogether.Patches
                 return;
             }
 
-            __instance.b_open = openButton;
-
             CoroutineRunner.Instance.Stop(CurrentRoutine);
             CurrentRoutine = CoroutineRunner.Instance.Run(CancelWaitForVulnerabilityAfter1sec());
+        }
+
+        private static void RestoreOpenButton(ChestWindowUi __instance)
+        {
+            if (__instance.b_open != null)
+            {
+                openButton = __instance.b_open;
+                return;
+            }
+
+            if (openButton == null)
+            {
+                foreach (var button in __instance.RuntimeGetComponentsInChildren<MyButton>(true))
+                {
+                    if (button != __instance.b_leave && button != __instance.b_take && button != __instance.b_banish
+                        && button.name.ToLowerInvariant().Contains("open"))
+                    {
+                        openButton = button;
+                        break;
+                    }
+                }
+            }
+
+            if (openButton == null)
+            {
+                Plugin.Log.LogError("[chest #93] Could not restore ChestWindowUi.b_open");
+                return;
+            }
+
+            __instance.b_open = openButton;
         }
 
         private static IEnumerator CancelWaitForVulnerabilityAfter1sec()
