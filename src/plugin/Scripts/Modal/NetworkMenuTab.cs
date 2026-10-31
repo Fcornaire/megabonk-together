@@ -14,10 +14,13 @@ namespace MegabonkTogether.Scripts
 {
     internal class NetworkMenuTab : ModalBase
     {
+        private const string PatreonUrl = "https://www.patreon.com/DShadModdingAdventure";
+
         private CustomButton randomButton;
         private CustomButton friendliesButton;
         private CustomButton closeButton;
         private CustomButton stopButton;
+        private CustomButton supportButton;
         private TMP_InputField playerNameInput;
         private MainMenu mainMenu;
         private GameObject label;
@@ -58,6 +61,7 @@ namespace MegabonkTogether.Scripts
         protected override void OnUICreated()
         {
             CreateCloseButton();
+            CreateSupportButton();
             CreatePlayerNameInput();
             CreateMatchButtons();
             CreateStopButton();
@@ -101,6 +105,44 @@ namespace MegabonkTogether.Scripts
             rectTransform.pivot = new Vector2(0.5f, 0.5f);
             rectTransform.anchoredPosition = new Vector2(0, -200f);
             rectTransform.sizeDelta = new Vector2(300, 70);
+        }
+
+        private void CreateSupportButton()
+        {
+            var buttonObj = GameObject.Instantiate(mainMenu.btnPlay.gameObject);
+            buttonObj.transform.SetParent(panel.transform, false);
+
+            var originalButton = buttonObj.GetComponent<MyButtonNormal>();
+            if (originalButton != null)
+            {
+                UnityEngine.Object.DestroyImmediate(originalButton);
+            }
+
+            UnityEngine.UI.Button button = buttonObj.GetComponentInChildren<UnityEngine.UI.Button>();
+            if (button != null)
+            {
+                button.onClick = new();
+            }
+
+            var localizeStringEvent = buttonObj.GetComponentInChildren<LocalizeStringEvent>();
+            if (localizeStringEvent != null)
+            {
+                UnityEngine.Object.DestroyImmediate(localizeStringEvent);
+            }
+
+            supportButton = buttonObj.AddComponent<CustomButton>();
+            supportButton.SetOnClickAction(OnSupportClicked);
+
+            var textWrapper = buttonObj.GetComponent<ButtonTextWrapper>();
+            textWrapper.t_text.text = "Support";
+            textWrapper.t_text.fontSize = 28;
+
+            var rectTransform = buttonObj.GetComponent<RectTransform>();
+            rectTransform.anchorMin = new Vector2(1f, 1f);
+            rectTransform.anchorMax = new Vector2(1f, 1f);
+            rectTransform.pivot = new Vector2(1f, 1f);
+            rectTransform.anchoredPosition = new Vector2(-15f, -15f);
+            rectTransform.sizeDelta = new Vector2(170, 50);
         }
 
         private void CreatePlayerNameInput()
@@ -858,6 +900,12 @@ namespace MegabonkTogether.Scripts
             CloseModal();
         }
 
+        private void OnSupportClicked()
+        {
+            AudioManager.Instance.PlaySfx(AudioManager.Instance.uiSelect.sounds[0]);
+            Application.OpenURL(PatreonUrl);
+        }
+
         private void OnRandomClicked()
         {
             AudioManager.Instance.PlaySfx(AudioManager.Instance.uiSelect.sounds[0]);
@@ -972,6 +1020,7 @@ namespace MegabonkTogether.Scripts
             friendliesButton.gameObject.SetActive(isVisible);
             netplayOptionsButton.gameObject.SetActive(isVisible);
             closeButton.gameObject.SetActive(isVisible);
+            supportButton.gameObject.SetActive(isVisible);
             playerNameInput.gameObject.SetActive(isVisible);
             label.SetActive(isVisible);
         }

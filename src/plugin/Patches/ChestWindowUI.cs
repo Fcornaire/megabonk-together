@@ -41,7 +41,6 @@ namespace MegabonkTogether.Patches
         private static readonly Services.ISynchronizationService synchronizationService = Plugin.Services.GetService<Services.ISynchronizationService>();
         public static Coroutine CurrentRoutine;
         private static TMPro.TextMeshProUGUI infoText;
-        private static MyButton openButton;
 
         /// <summary>
         /// Diagnostic for issue #93 (soft lock when opening chest)
@@ -63,7 +62,7 @@ namespace MegabonkTogether.Patches
         }
 
         /// <summary>
-        /// Didn't find a proper way to hide the open button ¯\_(ツ)_/¯
+        /// Auto open the chest on non shared experience
         /// Also let the original method run if shared experience is enabled
         /// </summary>
         [HarmonyPostfix]
@@ -80,13 +79,8 @@ namespace MegabonkTogether.Patches
                 return;
             }
 
-            if (openButton == null)
-            {
-                openButton = __instance.b_open;
-            }
-
             __instance.OpenButton();
-            __instance.b_open = null;
+            __instance.CancelInvoke(nameof(ChestWindowUi.ShowOpenButton));
         }
 
         /// <summary>
@@ -124,9 +118,14 @@ namespace MegabonkTogether.Patches
         /// </summary>
         [HarmonyPostfix]
         [HarmonyPatch(nameof(ChestWindowUi.OnClose))]
-        public static void OnClose_Postfix(ChestWindowUi __instance)
+        public static void OnClose_Postfix()
         {
             if (!synchronizationService.HasNetplaySessionStarted())
+            {
+                return;
+            }
+
+            if (synchronizationService.IsSharedExperienceEnabled())
             {
                 return;
             }
@@ -136,8 +135,6 @@ namespace MegabonkTogether.Patches
                 Plugin.Log.LogDebug("No active invulnerability routine, skipping.");
                 return;
             }
-
-            __instance.b_open = openButton;
 
             CoroutineRunner.Instance.Stop(CurrentRoutine);
             CurrentRoutine = CoroutineRunner.Instance.Run(CancelWaitForVulnerabilityAfter1sec());
