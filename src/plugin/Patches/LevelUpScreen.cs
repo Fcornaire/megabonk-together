@@ -102,6 +102,11 @@ namespace MegabonkTogether.Patches
                 return;
             }
 
+            if (synchronizationService.IsSharedExperienceEnabled())
+            {
+                return;
+            }
+
             if (CurrentRoutine == null)
             {
                 Plugin.Log.LogDebug("No active invulnerability routine, skipping.");

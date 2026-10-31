@@ -6,6 +6,12 @@
 #     "Change 2 description",
 # ]
 
+[version."5.1.1"]
+changes = [
+    "Fixed chest soft lock (Shared Experience): Chests could end up with only the banish button",
+    "Added a Support button in the TOGETHER! menu"
+]
+
 [version."5.1.0"]
 changes = [
     "More code optimization! this wil help for more stable FPS"

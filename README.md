@@ -43,6 +43,11 @@ More info at [Notable Network Changes](./NETPLAY_CHANGES.md)
 <details>
 <summary>📋 Click to view full changelog</summary>
 
+### v5.1.1
+
+- 📦 **Fixed chest soft lock (Shared Experience)**: Chests could end up with only the banish button
+- 💖 **Added a Support button**
+
 ### v5.1.0
 
 - 🚀 **More code optimizations one more time !**
